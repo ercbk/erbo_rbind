@@ -1,0 +1,163 @@
+---
+title: Evaluating Nominees for the Reds Hall of Fame
+author: Eric Book
+categories:
+      - shiny
+      - sports-analysis
+tags:
+      - shiny
+date: '2018-03-02'
+slug: jaws4_guide
+---
+
+
+
+<div id="intro" class="section level2">
+<h2>Introduction</h2>
+<p>The purpose of this <a href="https://erbo.shinyapps.io/jaws4/">dashboard</a> is to provide tools to evaluate nominees for the Reds Hall of Fame. Its primary feature is the JAWS-4 statistic. JAWS-4 is a version of Jay Jaffe’s JAWS statistic that’s been modified to apply to a franchise’s Hall of Fame.</p>
+<p>The JAWS statistic is meant to be a starting point in the discussion of a nominee’s creditials for the Hall of Fame. Jaffe provides a thorough explanation <a href="https://www.si.com/mlb/2017/11/27/hall-fame-jaws-intro-2018-ballot">here</a>. There’s also a more succinct description at <a href="https://www.baseball-reference.com/about/jaws.shtml">Baseball-Reference</a>.</p>
+<p>Other features include a Hall of Fame score which relates a player’s statistics to a typical member of the Hall of Fame and player stat ranks and percentiles. Lastly, there are multiple tables to compare players in other categories like the postseason, fielding, and awards.</p>
+<div id="controls" class="section level3">
+<h3>Controls</h3>
+<p>For those unfamilar with shinydashboard and DataTables, there are some basic functions you should be aware of.</p>
+<ol style="list-style-type: decimal">
+<li>The toggle button in the header collapses/displays the sidebar.</li>
+<li>The column visibility button adds/removes columns from view.</li>
+<li>The PDF and CSV buttons download the data from that table in .pdf and .csv format.
+<ol style="list-style-type: lower-roman">
+<li>PDF: If the rows are filtered, then only those rows will be present in the downloaded document. It includes only rows on page 1 of the table. The number of entries per page can be specified at the bottom left corner of many of the tables. Regardless of which columns are visible, all columns will be included up to a maximum of 19 columns.</li>
+<li>CSV: Only difference from PDF is that there is no column limit. So every column is included regardless of the size of the table.</li>
+</ol></li>
+<li>The filter window uses <a href="https://www.regular-expressions.info">regex</a> to filter the table. Note: you cannot specify the column to which the search criteria is applied. Examples:
+<ol style="list-style-type: lower-roman">
+<li>bench|rose|Larkin returns rows that correspond to those players – ben|bar|ros will also return those players (along with Ernie Lombardi).</li>
+<li>1B|LF selects all rows with positon equal to first base or left field but also returns Dolf Luque.</li>
+<li>e$ returns players whose names end in “e” like Bid McPhee but not Joe Morgan. b$ can also be used to select all rows with position equal to 1B, 2B, or 3B.</li>
+<li>^e returns players’ names that begin with the letter “e” such as Eric Davis</li>
+<li>^[ep] returns all players whose name begins with an “e” or a “p” but also returns every pitcher.</li>
+<li>Numbers may also be used. 3358 will return all rows with that string of numbers in that order.</li>
+</ol></li>
+</ol>
+<div class="figure">
+<img src="/charts/Home%20Screen%20Labelled.png" />
+
+</div>
+</div>
+</div>
+<div id="features" class="section level2">
+<h2>Features</h2>
+<div id="home" class="section level3">
+<h3>Home</h3>
+<p>This page shows the current JAWS median values and weighted median values for each group/position. The ridge plot visualizes the distributions for each group. Please see the links in the <a href="#intro">introduction</a> for explanations of these values.</p>
+<div class="figure">
+<img src="/charts/Home%20Screen.png" />
+
+</div>
+</div>
+<div id="jaws-4" class="section level3">
+<h3>JAWS-4</h3>
+<p>The text input allows the user to select a player. Then dot plots are rendered that show how that player’s total WAR as a Red and his JAWS4 score compare with that of a typical Hall of Famer. The line chart shows the player’s WAR for every year he was a Red. Hovering over each point displays its value. The horizontal dashed line is one of two values: the median WAR per season of pitchers or the median WAR per season of position players.</p>
+<div class="figure">
+<img src="/charts/JAWS%20page.png" />
+
+</div>
+</div>
+<div id="profile" class="section level3">
+<h3>Profile</h3>
+<p>Tables show various statistical categories while the deviation plot gives a calculated score that relates the player’s statistics to a typical Hall of Famer. The score gives users an estimate of where the player has excelled and faltered which many bolster or hinder his case. It also provides the user with an idea of which statistics to examine further on the Stat Rank page.</p>
+<p>Rough Guide:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="center">Rating</th>
+<th align="center">Score</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">Excellent</td>
+<td align="center">2</td>
+</tr>
+<tr class="even">
+<td align="center">Good</td>
+<td align="center">0.5</td>
+</tr>
+<tr class="odd">
+<td align="center">Median</td>
+<td align="center">0</td>
+</tr>
+<tr class="even">
+<td align="center">Poor</td>
+<td align="center">-0.5</td>
+</tr>
+<tr class="odd">
+<td align="center">Awful</td>
+<td align="center">-2</td>
+</tr>
+</tbody>
+</table>
+<div class="figure">
+<img src="/charts/Profile%20page.png" />
+
+</div>
+</div>
+<div id="stat-rank" class="section level3">
+<h3>Stat Rank</h3>
+<p>Ranks and percentiles of player statistics for both the Hall of Fame and franchise history can be viewed on this page. There are also Hall of Fame and franchise tables so the user can see which players rank above and below the nominee.</p>
+<p><img src="/charts/Stat%20Rank%20page%20Pitching.png" /> <img src="/charts/Stat%20Rank%20page%20Franchise.png" /></p>
+</div>
+<div id="numbers" class="section level3">
+<h3>Numbers</h3>
+<p>Here the user can have all the stats in front of them and compare players. Also, clickable links to player pages at Baseball-Reference and FanGraphs are provided under the Id columns.</p>
+<div class="figure">
+<img src="/charts/Numbers%20page%20Batting.png" />
+
+</div>
+</div>
+</div>
+<div id="notes" class="section level2">
+<h2>Notes</h2>
+<ul>
+<li>When entering player names and stats, entries are case sensitive.</li>
+<li>All tables contain both nominees and inducteees.</li>
+<li>To qualify for the JAWS-4 calculation the player must have been tenured with the Reds for at least 4 seasons.</li>
+<li>To qualify for other statistical tables players needed at least 1500 plate appearances or 500 innings.</li>
+<li>Known issues and inconsistencies are listed and discussed <a href="https://github.com/nllspc/Sports-Analysis/blob/master/RedsJAWs/Notes.md#issues">here</a>.</li>
+<li>Explanations about the decision-making and details involved in the calculations are <a href="https://github.com/nllspc/Sports-Analysis/blob/master/RedsJAWs/Notes.md#calculations">here</a>.</li>
+</ul>
+</div>
+<div id="acknowledgements" class="section level2">
+<h2>Acknowledgements</h2>
+<div id="data" class="section level3">
+<h3>Data</h3>
+<p>Data for this project was gathered from <a href="https://www.baseball-reference.com">Baseball-Reference</a>, <a href="https://www.fangraphs.com">FanGraphs</a>, and <a href="http://lahman.r-forge.r-project.org/">Sean Lahman’s Baseball Database</a></p>
+</div>
+<div id="packages" class="section level3">
+<h3>Packages</h3>
+<ul>
+<li><a href="http://github.com/tidyverse/broom">broom</a></li>
+<li><a href="https://rstudio.github.io/DT">DT</a></li>
+<li><a href="https://github.com/renkun-ken/formattable">formattable</a></li>
+<li><a href="https://davidgohel.github.io/ggiraph">ggiraph</a></li>
+<li><a href="http://www.sthda.com/english/rpkgs/ggpubr">ggpubr</a></li>
+<li><a href="https://github.com/clauswilke/ggridges">ggridges</a></li>
+<li><a href="http://r-forge.r-project.org/R/?group_id=1221">Lahman</a></li>
+<li><a href="https://yihui.name/knitr/">knitr</a></li>
+<li><a href="https://github.com/beanumber/openWARData">openWARData</a></li>
+<li><a href="https://github.com/hadley/plyr">plyr</a></li>
+<li><a href="https://github.com/tidyverse/rlang">rlang</a></li>
+<li><a href="https://github.com/hadley/rvest">rvest</a></li>
+<li><a href="http://shiny.rstudio.com">shiny</a></li>
+<li><a href="https://github.com/lukehaas/css-loaders">shinycssloaders</a></li>
+<li><a href="http://rstudio.github.io/shinydashboard/">shinydashboard</a></li>
+<li><a href="https://github.com/tidyverse/tidyverse">tidyverse</a></li>
+<li><a href="https://github.com/sjmgarnier/viridis">viridis</a></li>
+</ul>
+</div>
+<div id="support" class="section level3">
+<h3>Support</h3>
+<p>Special Thanks to</p>
+<p><img src="/charts/louisville-rstats-hex.png" width="100px" height="100px" /></p>
+<p><a href="https://github.com/louisville-rstats">Louisville RStats</a></p>
+</div>
+</div>
