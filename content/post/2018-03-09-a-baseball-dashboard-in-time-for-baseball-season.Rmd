@@ -1,0 +1,25 @@
+---
+title: A Baseball Dashboard in Time for Baseball Season
+author: Eric Book
+date: '2018-03-09'
+slug: a-baseball-dashboard-in-time-for-baseball-season
+categories:
+  - shiny
+  - sports-analysis
+  - scraping
+  - eda
+tags:
+  - shiny
+  - outliers
+  - rvest
+  - ggridges
+  - DT
+draft: TRUE
+output:
+      blogdown::html_page:
+            toc: true
+            toc_depth: 1
+---
+
+# Introduction
+

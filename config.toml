@@ -1,4 +1,4 @@
-baseurl = "/"
+baseurl = "https://erbo.rbind.io/"
 disablePathToLower = false
 languageCode = "en-us"
 title = "Analytical Endeavors"
