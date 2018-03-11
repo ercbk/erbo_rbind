@@ -1,5 +1,5 @@
 ---
-title: Evaluating Nominees for the Reds Hall of Fame
+title: JAWS-4 Dashboard User Guide
 author: Eric Book
 categories:
       - shiny
