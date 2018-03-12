@@ -9,7 +9,7 @@ enableEmoji = true
 
 # Disqus shortcode
 # Disable comments for any individual post by adding "comments: false" in its frontmatter
-disqusShortname = "Your disqus shortname"
+disqusShortname = "erbo"
 
 # Number of blog posts in each pagination page
 paginate = 6
@@ -65,7 +65,7 @@ post = "/blog/:year-:month-:day-:slug/"
   continueReadingText = "Would you like to know more?"
 
   # Google analytics code - remove if you do not have/want Google Analytics - needs JavaScript
-  # googleAnalytics = "UA-XXXXX-X"
+  googleAnalytics = "UA-115551023-1"
 
   # Optional piwik tracking
   #[params.analytics.piwik]
