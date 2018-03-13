@@ -22,7 +22,7 @@ output:
 ---
 
 
-Throughout my life I've always struggled to conjure topics for research projects ,but for whatever reason, during my transition to data science, interesting projects have been falling into my lap seemingly left and right. The only issue has been which one to tackle first. This one came across my twitter feed last fall.
+Throughout my life I've always struggled to conjure topics for research projects, but for whatever reason, during my transition to data science, interesting projects have been falling into my lap seemingly left and right. The only issue has been which one to tackle first. This one came across my twitter feed last fall.
 
 
 ``` {r, echo=FALSE}
@@ -34,6 +34,6 @@ blogdown::shortcode("tweet", "900017684590579713")
 blogdown::shortcode("tweet", "900033162771910656")
 ```
 
-Baseball Fan? `:white_check_mark:` Math skills? `:white_check_mark:` Computer skills? `:white_check_mark:`
+Baseball Fan? :white_check_mark: Math skills? :white_check_mark: Computer skills? :white_check_mark:
 
 I was in the middle of a HTML Widget class and Shiny
