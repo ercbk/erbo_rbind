@@ -34,6 +34,6 @@ blogdown::shortcode("tweet", "900017684590579713")
 blogdown::shortcode("tweet", "900033162771910656")
 ```
 
-Baseball Fan? :white_check_mark: Math skills? :white_check_mark: Computer skills? :white_check_mark:
+Baseball Fan? `r emo::ji("white_check_mark")` Math skills? :white_check_mark: Computer skills? :white_check_mark:
 
 I was in the middle of a HTML Widget class and Shiny
