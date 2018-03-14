@@ -14,7 +14,7 @@ tags:
   - rvest
   - ggridges
   - DT
-draft: FALSE
+draft: TRUE
 output:
       blogdown::html_page:
             toc: true
@@ -23,8 +23,38 @@ output:
 
 
 
-<p>Throughout my life I’ve always struggled to conjure topics for research projects, but for whatever reason, during my transition to data science, interesting projects have been falling into my lap seemingly left and right. The only issue has been which one to tackle first. This one came across my twitter feed last fall.</p>
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
-<p>Baseball Fan? ✅ Math skills? :white_check_mark: Computer skills? :white_check_mark:</p>
-<p>I was in the middle of a HTML Widget class and Shiny</p>
+<p>Baseball fan? ✅ Math? ✅ Computers skills? ✅</p>
+<div id="jaws" class="section level2">
+<h2>JAWS</h2>
+<p>For the uninitiated, the first thing you need to understand is <em>WAR</em>. <a href="https://www.fangraphs.com/library/misc/war/">WAR</a> attempts to encapsulate a player’s yearly contribution into one statistic. <em>JAWS</em> is calculated by taking the average of a player’s total WAR over their career and the sum of their seven highest WAR values. The JAWS statistic is meant to be a starting point in the discussion of a nominee’s creditials for the Hall of Fame. Jaffe provides a thorough explanation <a href="https://www.si.com/mlb/2017/11/27/hall-fame-jaws-intro-2018-ballot">here</a>. There’s also a more succinct description at <a href="https://www.baseball-reference.com/about/jaws.shtml">Baseball-Reference</a>.</p>
+<p>The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise’s Hall of Fame. Instead of career WAR, we’ll be using WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.</p>
+</div>
+<div id="scrape-hall-of-fame-inductee-names" class="section level2">
+<h2>Scrape Hall of Fame Inductee Names</h2>
+<pre class="r"><code>library(tidyverse)
+library(rvest)
+
+url &lt;- &quot;https://en.wikipedia.org/wiki/Cincinnati_Reds_Hall_of_Fame_and_Museum#Cincinnati_Reds_Hall_of_Fame_members&quot;
+members &lt;- url %&gt;%
+      read_html() %&gt;%
+      html_nodes(xpath=&#39;//*[@id=&quot;mw-content-text&quot;]/div/table[2]&#39;) %&gt;%
+      html_table()
+members &lt;- members[[1]]
+str(members)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    89 obs. of  5 variables:
+##  $ Year    : chr  &quot;1958&quot; &quot;1958&quot; &quot;1958&quot; &quot;1958&quot; ...
+##  $ No.     : chr  &quot;30&quot; &quot;4&quot; &quot;10&quot; &quot;33&quot; ...
+##  $ Inductee: chr  &quot;Paul Derringer&quot; &quot;Ernie Lombardi&quot; &quot;Frank McCormick&quot; &quot;Johnny Vander Meer&quot; ...
+##  $ Position: chr  &quot;P&quot; &quot;C&quot; &quot;1B&quot; &quot;P&quot; ...
+##  $ Tenure  : chr  &quot;1933–1942&quot; &quot;1932–1941&quot; &quot;1934–1945&quot; &quot;1937–1943\n1946–1949&quot; ...</code></pre>
+<pre class="r"><code>head(members)</code></pre>
+<pre><code>##   Year No.           Inductee      Position               Tenure
+## 1 1958  30     Paul Derringer             P            1933–1942
+## 2 1958   4     Ernie Lombardi             C            1932–1941
+## 3 1958  10    Frank McCormick            1B            1934–1945
+## 4 1958  33 Johnny Vander Meer             P 1937–1943\n1946–1949
+## 5 1958  31      Bucky Walters P/3B\nManager 1938–1948\n1948–1949
+## 6 1959  24       Ival Goodman            RF            1935–1942</code></pre>
+</div>
