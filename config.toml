@@ -43,7 +43,7 @@ post = "/blog/:year-:month-:day-:slug/"
   # --- End sidebar options ---
   
   
-  #pygmentsstyle = "solarized_dark"
+  pygmentsStyle = "autumn"
   
   # Use internal highlighter instead of Chroma
   pygmentsUseClassic=true
