@@ -43,12 +43,8 @@ post = "/blog/:year-:month-:day-:slug/"
   # --- End sidebar options ---
   
   
-  pygmentsStyle = "autumn"
+  customCSS = "css/dracula.css"
   
-  # Use internal highlighter instead of Chroma
-  pygmentsUseClassic=true
-  
-  pygmentscodefences = true
   
   # If set to true, navigation menu links will open in a new window with the exception of links to root ("/")
   # If this item does not exist or set to false, then navigation menu links will open in the same window
