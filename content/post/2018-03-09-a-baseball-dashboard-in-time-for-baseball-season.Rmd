@@ -50,6 +50,8 @@ The question is can JAWS, whose domain of applicability is the MLB Hall of Fame,
 
 ## Scrape Hall of Fame Inductee Names
 
+Words
+
 ```{r scrape, message=FALSE}
 
 library(tidyverse)
