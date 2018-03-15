@@ -50,10 +50,10 @@
   <!-- Google Analytics -->
   {{ partials "google/analytics" . }}
   
-  <!-- Syntax Highlighting 
-  <link rel="stylesheet" href="{{"css/dracula.css" | absURL}}" rel="stylesheet" id="theme-stylesheet">
+  <!-- Syntax Highlighting -->
+  <link rel="stylesheet" href="{{"css/tomorrow-night-bright.css" | absURL}}" rel="stylesheet" id="theme-stylesheet">
   <script src="{{ "js/highlight.pack.js" | absURL }}"></script>
-  <script>hljs.initHighlightingOnLoad();</script> -->
+  <script>hljs.initHighlightingOnLoad();</script>
 
 </head>
 <body{{ with .Site.Params.theme }} class="{{ . }}"{{ end }}>
