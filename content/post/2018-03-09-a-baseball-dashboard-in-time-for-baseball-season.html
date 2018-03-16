@@ -33,7 +33,12 @@ output:
 </div>
 <div id="scrape-hall-of-fame-inductee-names" class="section level2">
 <h2>Scrape Hall of Fame Inductee Names</h2>
-<p>Words</p>
+<p>First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information for download or presented it in a tidy format, so I decided to go with Wikipedia figuring it would be useful experience in case I needed to use that site again someday.</p>
+<div class="figure">
+<img src="/charts/copy_xpath.gif" />
+
+</div>
+<p>Honestly, I expected this part to be more of a hassle, but <code>rvest</code> made the process quite painless. Use Google Chrome’s inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you’ll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and lastly, copy xpath.</p>
 <pre class="r"><code>library(tidyverse)
 library(rvest)
 
@@ -42,20 +47,50 @@ members &lt;- url %&gt;%
       read_html() %&gt;%
       html_nodes(xpath=&#39;//*[@id=&quot;mw-content-text&quot;]/div/table[2]&#39;) %&gt;%
       html_table()
-members &lt;- members[[1]]
-str(members)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    89 obs. of  5 variables:
-##  $ Year    : chr  &quot;1958&quot; &quot;1958&quot; &quot;1958&quot; &quot;1958&quot; ...
-##  $ No.     : chr  &quot;30&quot; &quot;4&quot; &quot;10&quot; &quot;33&quot; ...
-##  $ Inductee: chr  &quot;Paul Derringer&quot; &quot;Ernie Lombardi&quot; &quot;Frank McCormick&quot; &quot;Johnny Vander Meer&quot; ...
-##  $ Position: chr  &quot;P&quot; &quot;C&quot; &quot;1B&quot; &quot;P&quot; ...
-##  $ Tenure  : chr  &quot;1933–1942&quot; &quot;1932–1941&quot; &quot;1934–1945&quot; &quot;1937–1943\n1946–1949&quot; ...</code></pre>
-<pre class="r"><code>head(members)</code></pre>
-<pre><code>##   Year No.           Inductee      Position               Tenure
-## 1 1958  30     Paul Derringer             P            1933–1942
-## 2 1958   4     Ernie Lombardi             C            1932–1941
-## 3 1958  10    Frank McCormick            1B            1934–1945
-## 4 1958  33 Johnny Vander Meer             P 1937–1943\n1946–1949
-## 5 1958  31      Bucky Walters P/3B\nManager 1938–1948\n1948–1949
-## 6 1959  24       Ival Goodman            RF            1935–1942</code></pre>
+members &lt;- members[[1]]</code></pre>
+<pre class="r"><code>glimpse(members)</code></pre>
+<pre><code>## Observations: 89
+## Variables: 5
+## $ Year     &lt;chr&gt; &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1959&quot;, &quot;1959...
+## $ No.      &lt;chr&gt; &quot;30&quot;, &quot;4&quot;, &quot;10&quot;, &quot;33&quot;, &quot;31&quot;, &quot;24&quot;, &quot;18&quot;, &quot;44, 47&quot;, &quot;—...
+## $ Inductee &lt;chr&gt; &quot;Paul Derringer&quot;, &quot;Ernie Lombardi&quot;, &quot;Frank McCormick&quot;...
+## $ Position &lt;chr&gt; &quot;P&quot;, &quot;C&quot;, &quot;1B&quot;, &quot;P&quot;, &quot;P/3B\nManager&quot;, &quot;RF&quot;, &quot;P&quot;, &quot;P&quot;,...
+## $ Tenure   &lt;chr&gt; &quot;1933–1942&quot;, &quot;1932–1941&quot;, &quot;1934–1945&quot;, &quot;1937–1943\n19...</code></pre>
+<ul>
+<li>Year is the year inducted into the Reds HOF.</li>
+<li>No. is the number on the back of player’s jersey.</li>
+<li>Inductee is the player’s name.</li>
+<li>Position is the positions played.</li>
+<li>Tenure is the number of years played as a Red and is formatted as a range</li>
+</ul>
+<p>For our calculation, we’ll need Inductee, Position, and Tenure. There are formatting problems with Position and Tenure, but that information can be obtained elsewhere.</p>
+<p>There are only five nominees in the 2018 class so we can just copy/paste their information from the <a href="http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/">announcement</a>: third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco (1984-1989),pitcher Danny Graves (1997-2005), third baseman Scott Rolen (2009-2012) and outfielder Reggie Sanders (1991-1998).</p>
+</div>
+<div id="player-ids" class="section level2">
+<h2>Player IDs</h2>
+<p>To get our WAR values, we’ll utilize two data sets from the <code>openWARData</code> package: idTT (player IDs) and rWAR (Baseball-Reference WAR). Our member names are used to filter the idTT data to get IDs and the IDs to filter the rWAR data to get the WAR values.</p>
+<pre class="r"><code>library(openWARData)
+
+# Combining first and last names to match the member names we scraped
+idTTa &lt;- idTT %&gt;% select(key_bbref, name_last, name_first) %&gt;% 
+  mutate(name_whole= paste(name_first, name_last))
+
+# Missing values come along for the ride so they need removed
+indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;))</code></pre>
+<p>Administrative personnel were included in our members dataframe. They have no WAR values so they’ve been removed in the filtering process. Some players aren’t in <code>indID</code> because they had accent marks in their names in <code>members</code>. There’s also a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>.</p>
+<pre class="r"><code>missNamList &lt;- list(&quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave Concepcion&quot;, &quot;Ken Griffey&quot;,
+                    &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
+indID &lt;- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)) %&gt;% 
+      bind_rows(indID)</code></pre>
+<p>Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson are managers so they can be dropped as well.</p>
+<pre class="r"><code>indID &lt;- filter(indID, key_bbref != &quot;rosepe02&quot; &amp; key_bbref != &quot;morgajo01&quot;
+                    &amp; key_bbref != &quot;mccormi03&quot; &amp; key_bbref != &quot;andersp01&quot; 
+                    &amp; key_bbref != &quot;wrighge03&quot; &amp; key_bbref != &quot;hutchfr01&quot;)
+glimpse(indID)</code></pre>
+<pre><code>## Observations: 85
+## Variables: 4
+## $ key_bbref  &lt;fct&gt; luquedo01, cardele01, perezto01, conceda01, griffke...
+## $ name_last  &lt;fct&gt; Luque, Cardenas, Perez, Concepcion, Griffey, Griffe...
+## $ name_first &lt;fct&gt; Dolf, Leo, Tony, Dave, Ken, Ken, Jose, Cesar, Pedro...
+## $ name_whole &lt;chr&gt; &quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave C...</code></pre>
 </div>

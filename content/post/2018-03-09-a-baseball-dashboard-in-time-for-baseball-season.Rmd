@@ -48,9 +48,18 @@ For the uninitiated, the first thing you need to understand is *WAR*. [WAR](http
 The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise's Hall of Fame. Instead of career WAR, we'll be using WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.
 
 
+
 ## Scrape Hall of Fame Inductee Names
 
-Words
+
+First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information for download or presented it in a tidy format, so I decided to go with Wikipedia figuring it would be useful experience in case I needed to use that site again someday. 
+
+
+![](/charts/copy_xpath.gif)
+
+
+Honestly, I expected this part to be more of a hassle, but `rvest` made the process quite painless. Use Google Chrome's inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you'll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and lastly, copy xpath.
+
 
 ```{r scrape, message=FALSE}
 
@@ -63,7 +72,66 @@ members <- url %>%
       html_nodes(xpath='//*[@id="mw-content-text"]/div/table[2]') %>%
       html_table()
 members <- members[[1]]
-str(members)
-head(members)
 
+```
+
+
+```{r scrape-str}
+glimpse(members)
+```
+
+
+* Year is the year inducted into the Reds HOF.
+* No. is the number on the back of player's jersey.
+* Inductee is the player's name.
+* Position is the positions played.
+* Tenure is the number of years played as a Red and is formatted as a range
+
+
+For our calculation, we'll need Inductee, Position, and Tenure. There are formatting problems with Position and Tenure, but that information can be obtained elsewhere.
+
+There are only five nominees in the 2018 class so we can just copy/paste their information from the [announcement](http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/): third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco 
+(1984-1989),pitcher Danny Graves (1997-2005), third baseman Scott Rolen (2009-2012) and outfielder 
+Reggie Sanders (1991-1998).
+
+
+
+## Player IDs
+
+
+To get our WAR values, we'll utilize two data sets from the `openWARData` package: idTT (player IDs) and rWAR (Baseball-Reference WAR). Our member names are used to filter the idTT data to get IDs and the IDs to filter the rWAR data to get the WAR values.
+
+
+```{r idtt, message=FALSE}
+library(openWARData)
+
+# Combining first and last names to match the member names we scraped
+idTTa <- idTT %>% select(key_bbref, name_last, name_first) %>% 
+  mutate(name_whole= paste(name_first, name_last))
+
+# Missing values come along for the ride so they need removed
+indID <- map_dfr(members[,"Inductee"], function(x) filter(idTTa, name_whole == x & key_bbref != ""))
+
+```
+
+
+Administrative personnel were included in our members dataframe. They have no WAR values so they've been removed in the filtering process. Some players aren't in `indID` because they had accent marks in their names in `members`. There's also a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`.
+
+
+```{r id-missname}
+missNamList <- list("Dolf Luque", "Leo Cardenas", "Tony Perez", "Dave Concepcion", "Ken Griffey",
+                    "Jose Rijo", "Cesar Geronimo", "Pedro Borbon")
+indID <- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x & key_bbref != "")) %>% 
+      bind_rows(indID)
+```
+
+
+Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson are managers so they can be dropped as well.
+
+
+```{r id-rm}
+indID <- filter(indID, key_bbref != "rosepe02" & key_bbref != "morgajo01"
+                    & key_bbref != "mccormi03" & key_bbref != "andersp01" 
+                    & key_bbref != "wrighge03" & key_bbref != "hutchfr01")
+glimpse(indID)
 ```
