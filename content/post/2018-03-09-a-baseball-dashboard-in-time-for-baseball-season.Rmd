@@ -39,7 +39,7 @@ blogdown::shortcode("tweet", "900033162771910656")
 
 Baseball fan? `r emo::ji("white_check_mark")` Math? `r emo::ji("white_check_mark")` Computers skills? `r emo::ji("white_check_mark")`
 
-
+It's always nice when project ideas fall into your lap. Let's build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.
 
 ## JAWS
 
@@ -52,13 +52,13 @@ The question is can JAWS, whose domain of applicability is the MLB Hall of Fame,
 ## Scrape Hall of Fame Inductee Names
 
 
-First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information for download or presented it in a tidy format, so I decided to go with Wikipedia figuring it would be useful experience in case I needed to use that site again someday. 
+First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information available to download or presented it in a tidy format. Wikipedia is a source that has wide-ranging utility. This is a good opportunity to become familiar with scraping the website. 
 
 
 ![](/charts/copy_xpath.gif)
 
 
-Honestly, I expected this part to be more of a hassle, but `rvest` made the process quite painless. Use Google Chrome's inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you'll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and lastly, copy xpath.
+Honestly, I expected this part to be more of a hassle, but `rvest` made the process quite painless. Use Google Chrome's inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you'll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and copy xpath.
 
 
 ```{r scrape, message=FALSE}
@@ -115,7 +115,7 @@ indID <- map_dfr(members[,"Inductee"], function(x) filter(idTTa, name_whole == x
 ```
 
 
-Administrative personnel were included in our members dataframe. They have no WAR values so they've been removed in the filtering process. Some players aren't in `indID` because they had accent marks in their names in `members`. There's also a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`.
+Some players were excluded from `indID` because in `members`, they have accent marks in their names. Likewise, a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.
 
 
 ```{r id-missname}
@@ -135,3 +135,18 @@ indID <- filter(indID, key_bbref != "rosepe02" & key_bbref != "morgajo01"
                     & key_bbref != "wrighge03" & key_bbref != "hutchfr01")
 glimpse(indID)
 ```
+
+
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.min.js"></script>
+      <style>
+      iframe {
+            min-width: 100%;
+      }
+</style>
+      <iframe id="myIframe" src="https://erbo.shinyapps.io/jaws4/" scrolling="no" frameborder="no"></iframe>
+            <script>
+            iFrameResize({
+                  heightCalculationMethod: 'taggedElement'
+            });
+      </script>

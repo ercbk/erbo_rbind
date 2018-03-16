@@ -26,6 +26,7 @@ output:
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
 <p>Baseball fan? ✅ Math? ✅ Computers skills? ✅</p>
+<p>It’s always nice when project ideas fall into your lap. Let’s build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.</p>
 <div id="jaws" class="section level2">
 <h2>JAWS</h2>
 <p>For the uninitiated, the first thing you need to understand is <em>WAR</em>. <a href="https://www.fangraphs.com/library/misc/war/">WAR</a> attempts to encapsulate a player’s yearly contribution into one statistic. <em>JAWS</em> is calculated by taking the average of a player’s total WAR over their career and the sum of their seven highest WAR values. The JAWS statistic is meant to be a starting point in the discussion of a nominee’s creditials for the Hall of Fame. Jaffe provides a thorough explanation <a href="https://www.si.com/mlb/2017/11/27/hall-fame-jaws-intro-2018-ballot">here</a>. There’s also a more succinct description at <a href="https://www.baseball-reference.com/about/jaws.shtml">Baseball-Reference</a>.</p>
@@ -33,12 +34,12 @@ output:
 </div>
 <div id="scrape-hall-of-fame-inductee-names" class="section level2">
 <h2>Scrape Hall of Fame Inductee Names</h2>
-<p>First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information for download or presented it in a tidy format, so I decided to go with Wikipedia figuring it would be useful experience in case I needed to use that site again someday.</p>
+<p>First, we need to get the names of the members of the Reds Hall of Fame. There are a few places with this information including the Reds Hall of Fame website, Baseball-Reference, and Wikipedia. None had the information available to download or presented it in a tidy format. Wikipedia is a source that has wide-ranging utility. This is a good opportunity to become familiar with scraping the website.</p>
 <div class="figure">
 <img src="/charts/copy_xpath.gif" />
 
 </div>
-<p>Honestly, I expected this part to be more of a hassle, but <code>rvest</code> made the process quite painless. Use Google Chrome’s inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you’ll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and lastly, copy xpath.</p>
+<p>Honestly, I expected this part to be more of a hassle, but <code>rvest</code> made the process quite painless. Use Google Chrome’s inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you’ll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and copy xpath.</p>
 <pre class="r"><code>library(tidyverse)
 library(rvest)
 
@@ -77,7 +78,7 @@ idTTa &lt;- idTT %&gt;% select(key_bbref, name_last, name_first) %&gt;%
 
 # Missing values come along for the ride so they need removed
 indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;))</code></pre>
-<p>Administrative personnel were included in our members dataframe. They have no WAR values so they’ve been removed in the filtering process. Some players aren’t in <code>indID</code> because they had accent marks in their names in <code>members</code>. There’s also a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>.</p>
+<p>Some players were excluded from <code>indID</code> because in <code>members</code>, they have accent marks in their names. Likewise, a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.</p>
 <pre class="r"><code>missNamList &lt;- list(&quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave Concepcion&quot;, &quot;Ken Griffey&quot;,
                     &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
 indID &lt;- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)) %&gt;% 
@@ -93,4 +94,16 @@ glimpse(indID)</code></pre>
 ## $ name_last  &lt;fct&gt; Luque, Cardenas, Perez, Concepcion, Griffey, Griffe...
 ## $ name_first &lt;fct&gt; Dolf, Leo, Tony, Dave, Ken, Ken, Jose, Cesar, Pedro...
 ## $ name_whole &lt;chr&gt; &quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave C...</code></pre>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.min.js"></script>
+<pre><code>  &lt;style&gt;
+  iframe {
+        min-width: 100%;
+  }</code></pre>
+</style>
+<pre><code>  &lt;iframe id=&quot;myIframe&quot; src=&quot;https://erbo.shinyapps.io/jaws4/&quot; scrolling=&quot;no&quot; frameborder=&quot;no&quot;&gt;&lt;/iframe&gt;
+        &lt;script&gt;
+        iFrameResize({
+              heightCalculationMethod: &#39;taggedElement&#39;
+        });
+  &lt;/script&gt;</code></pre>
 </div>
