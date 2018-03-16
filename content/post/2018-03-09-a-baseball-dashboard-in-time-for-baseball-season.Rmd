@@ -61,7 +61,7 @@ First, we need to get the names of the members of the Reds Hall of Fame. There a
 Honestly, I expected this part to be more of a hassle, but `rvest` made the process quite painless. Use Google Chrome's inspect feature to obtain the xpath by scrolling down to the table with the member names, right-clicking on the page, and clicking inspect. In the left panel under the Elements tab, you'll see HTML code. Hovering over each line will shade an object on the page. Once we find the line of code that corresponds to the table we want, we right-click that line of code, choose copy, and copy xpath.
 
 
-```{r scrape, message=FALSE}
+```{r scrape, message=FALSE, cache=TRUE}
 
 library(tidyverse)
 library(rvest)
@@ -96,18 +96,19 @@ Reggie Sanders (1991-1998).
 
 
 
-## Player IDs
+## WAR Values
 
 
 To get our WAR values, we'll utilize two data sets from the `openWARData` package: idTT (player IDs) and rWAR (Baseball-Reference WAR). Our member names are used to filter the idTT data to get IDs and the IDs to filter the rWAR data to get the WAR values.
 
 
-```{r idtt, message=FALSE}
+```{r idtt, message=FALSE, cache=TRUE}
 library(openWARData)
 
 # Combining first and last names to match the member names we scraped
-idTTa <- idTT %>% select(key_bbref, name_last, name_first) %>% 
-  mutate(name_whole= paste(name_first, name_last))
+idTTa <- idTT %>%
+      select(key_bbref, name_last, name_first) %>%
+      mutate(name_whole = paste(name_first, name_last))
 
 # Missing values come along for the ride so they need removed
 indID <- map_dfr(members[,"Inductee"], function(x) filter(idTTa, name_whole == x & key_bbref != ""))
@@ -118,7 +119,7 @@ indID <- map_dfr(members[,"Inductee"], function(x) filter(idTTa, name_whole == x
 Some players were excluded from `indID` because in `members`, they have accent marks in their names. Likewise, a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.
 
 
-```{r id-missname}
+```{r id-missname, cache=TRUE}
 missNamList <- list("Dolf Luque", "Leo Cardenas", "Tony Perez", "Dave Concepcion", "Ken Griffey",
                     "Jose Rijo", "Cesar Geronimo", "Pedro Borbon")
 indID <- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x & key_bbref != "")) %>% 
@@ -126,10 +127,10 @@ indID <- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x & key_bb
 ```
 
 
-Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson are managers so they can be dropped as well.
+Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.
 
 
-```{r id-rm}
+```{r id-rm, cache=TRUE}
 indID <- filter(indID, key_bbref != "rosepe02" & key_bbref != "morgajo01"
                     & key_bbref != "mccormi03" & key_bbref != "andersp01" 
                     & key_bbref != "wrighge03" & key_bbref != "hutchfr01")
@@ -137,16 +138,39 @@ glimpse(indID)
 ```
 
 
+Now for the nominees,
 
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.min.js"></script>
-<style>
-      iframe {
-            min-width: 100%;
-      }
-</style>
-<iframe id="myIframe" src="https://erbo.shinyapps.io/jaws4/" scrolling="no" frameborder="no"></iframe>
-<script>
-      iFrameResize({
-            heightCalculationMethod: 'taggedElement'
-      });
-</script>
+```{r id-nom, cache=TRUE}
+nomNamList <- list("Aaron Boone", "Adam Dunn", "John Franco", "Danny Graves", "Scott Rolen",
+                   "Reggie Sanders")
+nomID <- map_dfr(nomNamList, function(x) filter(idTTa, name_whole == x & key_bbref != ""))
+
+# Snagged an extra Reggie Sanders
+nomID <- filter(nomID, key_bbref != "sandere01")
+```
+
+
+We have IDs for the inductees and nominees, so now we can get those WAR values. Also, we only want the seasons played in a Reds uniform.
+
+```{r war-val, cache=TRUE}
+
+# Inductees
+indWar <- map_dfr(as.character(indID$key_bbref), function(x) filter(rWAR, playerId == x)) %>%
+      select(playerId, yearId, teamId, rWAR) %>%
+      mutate_if(is.factor, as.character) %>% 
+      filter(teamId == "CIN")
+
+# Nominees
+nomWar <- map_dfr(as.character(nomID$key_bbref), function(x) filter(rWAR, playerId == x)) %>%
+      select(playerId, yearId, teamId, rWAR) %>%
+      mutate_if(is.factor, as.character) %>% 
+      filter(teamId == "CIN")
+
+glimpse(indWar)
+```
+
+
+
+## EDA
+
+Words
