@@ -174,7 +174,7 @@ glimpse(indWar)
 ## EDA
 
 
-Words
+If we look at tables of the different tenure values, we can calculate the percentage of players that would remain at each cutoff.
 
 ```{r eda-ind-yrs}
 # Inductees
@@ -185,6 +185,7 @@ table(indYrs$tenure)
 ```
 
 
+
 ```{r eda-nom-yrs}
 # Nominees
 nomYrs <- nomWar %>%
@@ -192,4 +193,28 @@ nomYrs <- nomWar %>%
       summarize(tenure = n())
 table(nomYrs$tenure)
 ```
+
+
+
+```{r eda-tab, echo=FALSE}
+
+library(knitr)
+library(kableExtra)
+
+perc_tab <- tribble(
+      ~cutoff, ~`% remaining`,
+      "7 yrs", "67%",
+      "6 yrs", "78%",
+      "5 yrs", "86%",
+      "4 yrs", "92%"
+)
+perc_tab %>% 
+      kable("html") %>% 
+      kable_styling()
+
+```
+
+
+
+Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn't part of this class, I'd consider five years but I wouldn't go above five.
 
