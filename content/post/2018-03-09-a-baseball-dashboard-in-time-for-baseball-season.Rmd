@@ -18,7 +18,7 @@ draft: FALSE
 output:
       blogdown::html_page:
             toc: true
-            toc_depth: 1
+            toc_depth: 2
 ---
 
 
@@ -198,19 +198,14 @@ table(nomYrs$tenure)
 
 ```{r eda-tab, echo=FALSE}
 
-library(knitr)
-library(kableExtra)
-
-perc_tab <- tribble(
-      ~cutoff, ~`% remaining`,
-      "7 yrs", "67%",
-      "6 yrs", "78%",
-      "5 yrs", "86%",
-      "4 yrs", "92%"
-)
-perc_tab %>% 
-      kable("html") %>% 
-      kable_styling()
+knitr::kable(matrix(c(
+      '7 yrs', '67%',
+      '6 yrs', '78%',
+      '5 yrs', '86%',
+      '4 yrs', '92%',
+      NULL
+), ncol = 2, byrow=TRUE, dimnames = list(NULL, c('Cutoff', '% Cutoff'))),
+booktabs=TRUE, caption = 'Inductees')
 
 ```
 

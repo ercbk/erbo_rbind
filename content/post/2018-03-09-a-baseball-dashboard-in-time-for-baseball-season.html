@@ -18,10 +18,18 @@ draft: FALSE
 output:
       blogdown::html_page:
             toc: true
-            toc_depth: 1
+            toc_depth: 2
 ---
 
 
+<div id="TOC">
+<ul>
+<li><a href="#jaws">JAWS</a></li>
+<li><a href="#scrape-hall-of-fame-inductee-names">Scrape Hall of Fame Inductee Names</a></li>
+<li><a href="#war-values">WAR Values</a></li>
+<li><a href="#eda">EDA</a></li>
+</ul>
+</div>
 
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
@@ -142,49 +150,30 @@ table(nomYrs$tenure)</code></pre>
 <pre><code>## 
 ## 4 6 7 8 9 
 ## 1 1 1 2 1</code></pre>
-<table class="table" style="margin-left: auto; margin-right: auto;">
+<table>
+<caption><span id="tab:eda-tab">Table 1: </span>Inductees</caption>
 <thead>
-<tr>
-<th style="text-align:left;">
-cutoff
-</th>
-<th style="text-align:left;">
-% remaining
-</th>
+<tr class="header">
+<th align="left">Cutoff</th>
+<th align="left">% Cutoff</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td style="text-align:left;">
-7 yrs
-</td>
-<td style="text-align:left;">
-67%
-</td>
+<tr class="odd">
+<td align="left">7 yrs</td>
+<td align="left">67%</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-6 yrs
-</td>
-<td style="text-align:left;">
-78%
-</td>
+<tr class="even">
+<td align="left">6 yrs</td>
+<td align="left">78%</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-5 yrs
-</td>
-<td style="text-align:left;">
-86%
-</td>
+<tr class="odd">
+<td align="left">5 yrs</td>
+<td align="left">86%</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-4 yrs
-</td>
-<td style="text-align:left;">
-92%
-</td>
+<tr class="even">
+<td align="left">4 yrs</td>
+<td align="left">92%</td>
 </tr>
 </tbody>
 </table>
