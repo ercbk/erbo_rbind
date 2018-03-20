@@ -37,7 +37,7 @@ blogdown::shortcode("tweet", "900017684590579713")
 blogdown::shortcode("tweet", "900033162771910656")
 ```
 
-Baseball fan? `r emo::ji("white_check_mark")` Math? `r emo::ji("white_check_mark")` Computers skills? `r emo::ji("white_check_mark")`
+Baseball fan? `r emo::ji("ballot_box_with_check")` Math? `r emo::ji("ballot_box_with_check")` Computers skills? `r emo::ji("ballot_box_with_check")`
 
 It's always nice when project ideas fall into your lap. Let's build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.
 
@@ -90,7 +90,7 @@ glimpse(members)
 
 For our calculation, we'll need Inductee, Position, and Tenure. There are formatting problems with Position and Tenure, but that information can be obtained elsewhere.
 
-There are only five nominees in the 2018 class so we can just copy/paste their information from the [announcement](http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/): third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco 
+There are only six nominees in the 2018 class so we can just copy/paste their information from the [announcement](http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/): third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco 
 (1984-1989),pitcher Danny Graves (1997-2005), third baseman Scott Rolen (2009-2012) and outfielder 
 Reggie Sanders (1991-1998).
 
@@ -167,14 +167,16 @@ nomWar <- map_dfr(as.character(nomID$key_bbref), function(x) filter(rWAR, player
       filter(teamId == "CIN")
 
 glimpse(indWar)
+
 ```
 
 
 
 ## EDA
 
+### Tenure
 
-If we look at tables of the different tenure values, we can calculate the percentage of players that would remain at each cutoff.
+We can now turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.
 
 ```{r eda-ind-yrs}
 # Inductees
@@ -198,18 +200,79 @@ table(nomYrs$tenure)
 
 ```{r eda-tab, echo=FALSE}
 
+library(kableExtra)
 knitr::kable(matrix(c(
       '7 yrs', '67%',
       '6 yrs', '78%',
       '5 yrs', '86%',
       '4 yrs', '92%',
       NULL
-), ncol = 2, byrow=TRUE, dimnames = list(NULL, c('Cutoff', '% Cutoff'))),
-booktabs=TRUE, caption = 'Inductees')
+), ncol = 2, byrow=TRUE, dimnames = list(NULL, c('Cutoff', '% Remaining'))),
+format = "html") %>%
+      kable_styling() %>%
+      row_spec(1:3, align = "c") %>% 
+      row_spec(4, bold = T, color = "#e78c45", align = "c")
 
 ```
 
+Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn't part of this class, I'd consider five years but wouldn't go above five.
+
+So the inductees that didn't make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren't in there. They played with the Reds before 1871 and their WAR wasn't available.
+
+```{r eda-cut, options}
+indWar <- filter(indWar, playerId != "grangwa01" & playerId != "mckecbi01"
+                     & playerId != "werbebi01" & playerId != "wrighge01"
+                     & playerId != "wrighha01")
+```
 
 
-Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn't part of this class, I'd consider five years but I wouldn't go above five.
+### Position
 
+Next, we need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it's usually done by position. So, if were to examine Scott Rolen's case, we'd look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo. 
+
+Jaffe makes this determination by calculating the total WAR at each position and selecting the position with the greatest value. Currently, I can't find a relatively convenient way to obtain the necessary data to make that calculation. We'll make our determination by using the `Lahman` package and its `Fielding` data set to find the position which has the most games played as a Red.
+
+
+```{r eda-pos}
+
+library(Lahman)
+
+# Inductees
+
+# Fielding dataset has different designations for 1800's Reds teams: CN1 and CN2.
+posDat_i <- map2_dfr(indWar$playerId, indWar$yearId, function(x,y) filter(Fielding, playerID == x & yearID == y)) %>% 
+      filter(teamID == "CIN" | teamID == "CN1" | teamID == "CN2")
+
+# Getting position with most games as a Red
+posDat_i <- posDat_i %>%
+      select(playerID, POS, G) %>% 
+      group_by(playerID, POS) %>% 
+      summarize(sumG = sum(G)) %>% 
+      filter(sumG == max(sumG)) %>% 
+      ungroup() %>% 
+      select(playerID, POS)
+
+# Jim O'Toole's ID isn't showing up in the Fielding data set but he was a pitcher his whole career. Double-checked. Adding him to the df.
+# Renaming playerID to join with another dataframe
+setdiff(indWar$playerId, posDat_i$playerID)
+posDat_i <- posDat_i %>% 
+      add_row(playerID = "o'tooji01", POS = "P") %>% 
+      rename(playerId = playerID)
+
+glimpse(posDat_i)
+
+# Nominees
+
+posDat_n <- map2_dfr(nomWar$playerId, nomWar$yearId, function(x,y) filter(Fielding, playerID == x & yearID == y)) %>% 
+      filter(teamID == "CIN" | teamID == "CN1" | teamID == "CN2")
+
+posDat_n <- posDat_n %>%
+      select(playerID, POS, G) %>% 
+      group_by(playerID, POS) %>% 
+      summarize(sumG = sum(G)) %>% 
+      filter(sumG == max(sumG)) %>% 
+      ungroup() %>% 
+      select(playerID, POS) %>% 
+      rename(playerId = playerID)
+
+```

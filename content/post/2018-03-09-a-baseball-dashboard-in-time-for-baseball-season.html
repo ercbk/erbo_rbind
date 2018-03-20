@@ -33,7 +33,7 @@ output:
 
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
-<p>Baseball fan? ✅ Math? ✅ Computers skills? ✅</p>
+<p>Baseball fan? ☑️ Math? ☑️ Computers skills? ☑️</p>
 <p>It’s always nice when project ideas fall into your lap. Let’s build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.</p>
 <div id="jaws" class="section level2">
 <h2>JAWS</h2>
@@ -73,7 +73,7 @@ members &lt;- members[[1]]</code></pre>
 <li>Tenure is the number of years played as a Red and is formatted as a range</li>
 </ul>
 <p>For our calculation, we’ll need Inductee, Position, and Tenure. There are formatting problems with Position and Tenure, but that information can be obtained elsewhere.</p>
-<p>There are only five nominees in the 2018 class so we can just copy/paste their information from the <a href="http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/">announcement</a>: third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco (1984-1989),pitcher Danny Graves (1997-2005), third baseman Scott Rolen (2009-2012) and outfielder Reggie Sanders (1991-1998).</p>
+<p>There are only six nominees in the 2018 class so we can just copy/paste their information from the <a href="http://www.cincinnati.com/story/sports/mlb/reds/2017/08/21/candidates-announced-2018-reds-hall-fame-ballot/586540001/">announcement</a>: third baseman Aaron Boone (1997-2003), outfielder Adam Dunn (2001-2008), pitcher John Franco (1984-1989),pitcher Danny Graves (1997-2005), third baseman Scott Rolen (2009-2012) and outfielder Reggie Sanders (1991-1998).</p>
 </div>
 <div id="war-values" class="section level2">
 <h2>WAR Values</h2>
@@ -133,7 +133,9 @@ glimpse(indWar)</code></pre>
 </div>
 <div id="eda" class="section level2">
 <h2>EDA</h2>
-<p>If we look at tables of the different tenure values, we can calculate the percentage of players that would remain at each cutoff.</p>
+<div id="tenure" class="section level3">
+<h3>Tenure</h3>
+<p>We can now turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.</p>
 <pre class="r"><code># Inductees
 indYrs &lt;- indWar %&gt;%
       group_by(playerId) %&gt;% 
@@ -150,32 +152,110 @@ table(nomYrs$tenure)</code></pre>
 <pre><code>## 
 ## 4 6 7 8 9 
 ## 1 1 1 2 1</code></pre>
-<table>
-<caption><span id="tab:eda-tab">Table 1: </span>Inductees</caption>
+<table class="table" style="margin-left: auto; margin-right: auto;">
 <thead>
-<tr class="header">
-<th align="left">Cutoff</th>
-<th align="left">% Cutoff</th>
+<tr>
+<th style="text-align:left;">
+Cutoff
+</th>
+<th style="text-align:left;">
+% Remaining
+</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td align="left">7 yrs</td>
-<td align="left">67%</td>
+<tr>
+<td style="text-align:left;text-align: center;">
+7 yrs
+</td>
+<td style="text-align:left;text-align: center;">
+67%
+</td>
 </tr>
-<tr class="even">
-<td align="left">6 yrs</td>
-<td align="left">78%</td>
+<tr>
+<td style="text-align:left;text-align: center;">
+6 yrs
+</td>
+<td style="text-align:left;text-align: center;">
+78%
+</td>
 </tr>
-<tr class="odd">
-<td align="left">5 yrs</td>
-<td align="left">86%</td>
+<tr>
+<td style="text-align:left;text-align: center;">
+5 yrs
+</td>
+<td style="text-align:left;text-align: center;">
+86%
+</td>
 </tr>
-<tr class="even">
-<td align="left">4 yrs</td>
-<td align="left">92%</td>
+<tr>
+<td style="text-align:left;font-weight: bold;color: #e78c45;text-align: center;">
+4 yrs
+</td>
+<td style="text-align:left;font-weight: bold;color: #e78c45;text-align: center;">
+92%
+</td>
 </tr>
 </tbody>
 </table>
-<p>Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn’t part of this class, I’d consider five years but I wouldn’t go above five.</p>
+<p>Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn’t part of this class, I’d consider five years but wouldn’t go above five.</p>
+<p>So the inductees that didn’t make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren’t in there. They played with the Reds before 1871 and their WAR wasn’t available.</p>
+<pre class="r"><code>indWar &lt;- filter(indWar, playerId != &quot;grangwa01&quot; &amp; playerId != &quot;mckecbi01&quot;
+                     &amp; playerId != &quot;werbebi01&quot; &amp; playerId != &quot;wrighge01&quot;
+                     &amp; playerId != &quot;wrighha01&quot;)</code></pre>
+</div>
+<div id="position" class="section level3">
+<h3>Position</h3>
+<p>Next, we need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it’s usually done by position. So, if were to examine Scott Rolen’s case, we’d look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo.</p>
+<p>Jaffe makes this determination by calculating the total WAR at each position and selecting the position with the greatest value. Currently, I can’t find a relatively convenient way to obtain the necessary data to make that calculation. We’ll make our determination by using the <code>Lahman</code> package and its <code>Fielding</code> data set to find the position which has the most games played as a Red.</p>
+<pre class="r"><code>library(Lahman)
+
+# Inductees
+
+# Fielding dataset has different designations for 1800&#39;s Reds teams: CN1 and CN2.
+posDat_i &lt;- map2_dfr(indWar$playerId, indWar$yearId, function(x,y) filter(Fielding, playerID == x &amp; yearID == y)) %&gt;% 
+      filter(teamID == &quot;CIN&quot; | teamID == &quot;CN1&quot; | teamID == &quot;CN2&quot;)
+
+# Getting position with most games as a Red
+posDat_i &lt;- posDat_i %&gt;%
+      select(playerID, POS, G) %&gt;% 
+      group_by(playerID, POS) %&gt;% 
+      summarize(sumG = sum(G)) %&gt;% 
+      filter(sumG == max(sumG)) %&gt;% 
+      ungroup() %&gt;% 
+      select(playerID, POS)
+
+# Jim O&#39;Toole&#39;s ID isn&#39;t showing up in the Fielding data set but he was a pitcher his whole career. Double-checked. Adding him to the df.
+# Renaming playerID to join with another dataframe
+setdiff(indWar$playerId, posDat_i$playerID)</code></pre>
+<pre><code>## [1] &quot;o&#39;tooji01&quot;</code></pre>
+<pre class="r"><code>posDat_i &lt;- posDat_i %&gt;% 
+      add_row(playerID = &quot;o&#39;tooji01&quot;, POS = &quot;P&quot;) %&gt;% 
+      rename(playerId = playerID)
+
+glimpse(posDat_i)</code></pre>
+<pre><code>## Observations: 78
+## Variables: 2
+## $ playerId &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;b...
+## $ POS      &lt;chr&gt; &quot;1B&quot;, &quot;OF&quot;, &quot;C&quot;, &quot;P&quot;, &quot;P&quot;, &quot;P&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;C&quot;, &quot;SS&quot;,...</code></pre>
+<pre class="r"><code># Nominees
+
+posDat_n &lt;- map2_dfr(nomWar$playerId, nomWar$yearId, function(x,y) filter(Fielding, playerID == x &amp; yearID == y)) %&gt;% 
+      filter(teamID == &quot;CIN&quot; | teamID == &quot;CN1&quot; | teamID == &quot;CN2&quot;)
+
+posDat_n &lt;- posDat_n %&gt;%
+      select(playerID, POS, G) %&gt;% 
+      group_by(playerID, POS) %&gt;% 
+      summarize(sumG = sum(G)) %&gt;% 
+      filter(sumG == max(sumG)) %&gt;% 
+      ungroup() %&gt;% 
+      select(playerID, POS) %&gt;% 
+      rename(playerId = playerID)
+
+glimpse(posDat_n)</code></pre>
+<pre><code>## Observations: 6
+## Variables: 2
+## $ playerId &lt;chr&gt; &quot;booneaa01&quot;, &quot;dunnad01&quot;, &quot;francjo01&quot;, &quot;graveda01&quot;, &quot;r...
+## $ POS      &lt;chr&gt; &quot;3B&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;P&quot;, &quot;3B&quot;, &quot;OF&quot;</code></pre>
+</div>
 </div>

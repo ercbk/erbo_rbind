@@ -44,7 +44,7 @@ post = "/blog/:year-:month-:day-:slug/"
   
   
   # overriding css file in static directory. Parameter in header.html in layouts/partials/ 
-  # customCSS = "css/dracula.css"
+  # customCSS = "css/style.tables.css"
   
   # If set to true, navigation menu links will open in a new window with the exception of links to root ("/")
   # If this item does not exist or set to false, then navigation menu links will open in the same window
