@@ -58,7 +58,7 @@ members &lt;- url %&gt;%
       html_table()
 members &lt;- members[[1]]</code></pre>
 <pre class="r"><code>glimpse(members)</code></pre>
-<pre><code>## Observations: 89
+<pre><code>## Observations: 86
 ## Variables: 5
 ## $ Year     &lt;chr&gt; &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1958&quot;, &quot;1959&quot;, &quot;1959...
 ## $ No.      &lt;chr&gt; &quot;30&quot;, &quot;4&quot;, &quot;10&quot;, &quot;33&quot;, &quot;31&quot;, &quot;24&quot;, &quot;18&quot;, &quot;44, 47&quot;, &quot;—...
@@ -92,12 +92,14 @@ indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) filter(idTTa, na
                     &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
 indID &lt;- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)) %&gt;% 
       bind_rows(indID)</code></pre>
-<p>Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.</p>
+<p>Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, Pedro Borbon, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.</p>
 <pre class="r"><code>indID &lt;- filter(indID, key_bbref != &quot;rosepe02&quot; &amp; key_bbref != &quot;morgajo01&quot;
                     &amp; key_bbref != &quot;mccormi03&quot; &amp; key_bbref != &quot;andersp01&quot; 
-                    &amp; key_bbref != &quot;wrighge03&quot; &amp; key_bbref != &quot;hutchfr01&quot;)
+                    &amp; key_bbref != &quot;wrighge03&quot; &amp; key_bbref != &quot;hutchfr01&quot;
+                    &amp; key_bbref != &quot;borbope02&quot;    
+                )
 glimpse(indID)</code></pre>
-<pre><code>## Observations: 85
+<pre><code>## Observations: 81
 ## Variables: 4
 ## $ key_bbref  &lt;fct&gt; luquedo01, cardele01, perezto01, conceda01, griffke...
 ## $ name_last  &lt;fct&gt; Luque, Cardenas, Perez, Concepcion, Griffey, Griffe...
@@ -124,7 +126,7 @@ nomWar &lt;- map_dfr(as.character(nomID$key_bbref), function(x) filter(rWAR, pla
       filter(teamId == &quot;CIN&quot;)
 
 glimpse(indWar)</code></pre>
-<pre><code>## Observations: 736
+<pre><code>## Observations: 721
 ## Variables: 4
 ## $ playerId &lt;chr&gt; &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;...
 ## $ yearId   &lt;int&gt; 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926,...
@@ -143,7 +145,7 @@ indYrs &lt;- indWar %&gt;%
 table(indYrs$tenure)</code></pre>
 <pre><code>## 
 ##  2  3  4  5  6  7  8  9 10 11 12 13 15 16 17 18 19 
-##  1  2  3  5  6 10 13  8 10  8  6  2  1  1  1  1  3</code></pre>
+##  1  2  3  5  6  9 12  8 10  8  6  2  1  1  1  1  3</code></pre>
 <pre class="r"><code># Nominees
 nomYrs &lt;- nomWar %&gt;%
       group_by(playerId) %&gt;% 
@@ -202,7 +204,14 @@ Cutoff
 <p>So the inductees that didn’t make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren’t in there. They played with the Reds before 1871 and their WAR wasn’t available.</p>
 <pre class="r"><code>indWar &lt;- filter(indWar, playerId != &quot;grangwa01&quot; &amp; playerId != &quot;mckecbi01&quot;
                      &amp; playerId != &quot;werbebi01&quot; &amp; playerId != &quot;wrighge01&quot;
-                     &amp; playerId != &quot;wrighha01&quot;)</code></pre>
+                     &amp; playerId != &quot;wrighha01&quot;)
+glimpse(indWar)</code></pre>
+<pre><code>## Observations: 713
+## Variables: 4
+## $ playerId &lt;chr&gt; &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;...
+## $ yearId   &lt;int&gt; 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926,...
+## $ teamId   &lt;chr&gt; &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN...
+## $ rWAR     &lt;dbl&gt; -0.14, 1.14, 4.56, 4.96, 3.10, 10.77, 2.55, 6.56, 1.1...</code></pre>
 </div>
 <div id="position" class="section level3">
 <h3>Position</h3>
@@ -234,7 +243,7 @@ setdiff(indWar$playerId, posDat_i$playerID)</code></pre>
       rename(playerId = playerID)
 
 glimpse(posDat_i)</code></pre>
-<pre><code>## Observations: 78
+<pre><code>## Observations: 76
 ## Variables: 2
 ## $ playerId &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;b...
 ## $ POS      &lt;chr&gt; &quot;1B&quot;, &quot;OF&quot;, &quot;C&quot;, &quot;P&quot;, &quot;P&quot;, &quot;P&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;C&quot;, &quot;SS&quot;,...</code></pre>
@@ -250,12 +259,6 @@ posDat_n &lt;- posDat_n %&gt;%
       filter(sumG == max(sumG)) %&gt;% 
       ungroup() %&gt;% 
       select(playerID, POS) %&gt;% 
-      rename(playerId = playerID)
-
-glimpse(posDat_n)</code></pre>
-<pre><code>## Observations: 6
-## Variables: 2
-## $ playerId &lt;chr&gt; &quot;booneaa01&quot;, &quot;dunnad01&quot;, &quot;francjo01&quot;, &quot;graveda01&quot;, &quot;r...
-## $ POS      &lt;chr&gt; &quot;3B&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;P&quot;, &quot;3B&quot;, &quot;OF&quot;</code></pre>
+      rename(playerId = playerID)</code></pre>
 </div>
 </div>

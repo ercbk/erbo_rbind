@@ -76,6 +76,15 @@ members <- members[[1]]
 ```
 
 
+```{r scrape-new, include=FALSE}
+
+# Adam Dunn was voted in by the fans in Nov 2017; the rest were voted in by vet committee by the time I wrote this article. Wiki had already updated their table. So when I scraped, it was throwing my numbers off. Removing votees so my numbers here match my project numbers.
+
+members <- members %>% 
+      filter(Inductee != "Adam Dunn" & Inductee != "Fred Norman" & Inductee != "Dave Bristol")
+```
+
+
 ```{r scrape-str}
 glimpse(members)
 ```
@@ -127,13 +136,15 @@ indID <- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x & key_bb
 ```
 
 
-Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.
+Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, Pedro Borbon, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.
 
 
 ```{r id-rm}
 indID <- filter(indID, key_bbref != "rosepe02" & key_bbref != "morgajo01"
                     & key_bbref != "mccormi03" & key_bbref != "andersp01" 
-                    & key_bbref != "wrighge03" & key_bbref != "hutchfr01")
+                    & key_bbref != "wrighge03" & key_bbref != "hutchfr01"
+                    & key_bbref != "borbope02"    
+                )
 glimpse(indID)
 ```
 
@@ -223,6 +234,7 @@ So the inductees that didn't make the cut were the following: Billy Werber, Bill
 indWar <- filter(indWar, playerId != "grangwa01" & playerId != "mckecbi01"
                      & playerId != "werbebi01" & playerId != "wrighge01"
                      & playerId != "wrighha01")
+glimpse(indWar)
 ```
 
 
@@ -252,8 +264,8 @@ posDat_i <- posDat_i %>%
       ungroup() %>% 
       select(playerID, POS)
 
-# Jim O'Toole's ID isn't showing up in the Fielding data set but he was a pitcher his whole career. Double-checked. Adding him to the df.
-# Renaming playerID to join with another dataframe
+# Jim O'Toole's Baseball-Reference ID in the Fielding data set is incorrect but he was a pitcher his whole career. Double-checked. Adding him to the df.
+# Renaming playerID to join with another dataframe later
 setdiff(indWar$playerId, posDat_i$playerID)
 posDat_i <- posDat_i %>% 
       add_row(playerID = "o'tooji01", POS = "P") %>% 
