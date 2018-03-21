@@ -25,7 +25,7 @@ library(emo)
 library(knitcitations)
 cleanbib()
 cite_options(hyperlink = 'to.doc', citation_format = 'text', style = 'html')
-citet(c(citation('rvest'), citation('openWARData'), citation('Lahman')))
+citet(c(citation('rvest'), citation('openWARData'), citation('Lahman'), citation('tidyverse')))
          
 ```
 
@@ -47,7 +47,7 @@ It's always nice when project ideas fall into your lap. Let's build an dashboard
 
 For the uninitiated, the first thing you need to understand is *WAR*. [WAR](https://www.fangraphs.com/library/misc/war/) attempts to encapsulate a player's yearly contribution into one statistic. *JAWS* is calculated by taking the average of a player's total WAR over their career and the sum of their seven highest WAR values. The JAWS statistic is meant to be a starting point in the discussion of a nominee's creditials for the Hall of Fame. Jaffe provides a thorough explanation [here](https://www.si.com/mlb/2017/11/27/hall-fame-jaws-intro-2018-ballot). There's also a more succinct description at [Baseball-Reference](https://www.baseball-reference.com/about/jaws.shtml).
 
-The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise's Hall of Fame. Instead of career WAR, we'll be using WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.
+The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise's Hall of Fame. Instead of career WAR, we'll be using only the WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.
 
 
 
@@ -258,6 +258,7 @@ Jaffe makes this determination by calculating the total WAR at each position and
 
 library(Lahman)
 
+head(Fielding, 3)
 
 # Fielding dataset has different designations for 1800's Reds teams: CN1 and CN2.
 posDat <- map2_dfr(warDat$playerId, warDat$yearId, function(x,y) {
@@ -287,6 +288,8 @@ glimpse(posDat)
 The outfield position can be further divided into right field, center field, and left field using the `Appearances` data set in `Lahman`. It would be desirable to also split the pitching position into relief and starting but unfortunately the `Lahman` package doesn't afford us this capability explicitly. I think the information could be derived from the games started statistic and some others but that task will have be left for another time.
 
 ```{r eda-of}
+
+head(Appearances, 3)
 
 # Get outfielder IDs
 ofDat <- posDat %>% 
@@ -328,7 +331,7 @@ posDat <- posDat %>%
 
 ## Conclusion
 
-We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played per position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
+We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played at a position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
 
 
 ## References

@@ -33,11 +33,11 @@ output:
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
 <p>Baseball fan? ☑️ Math? ☑️ Computers skills? ☑️</p>
-<p>It’s always nice when project ideas fall into your lap. Let’s build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.</p>
+<p>It’s always nice when project ideas fall into your lap. Let’s build an dashboard that can be used to evaluate nominees for a franchise’s hall of fame.</p>
 <div id="jaws" class="section level2">
 <h2>JAWS</h2>
 <p>For the uninitiated, the first thing you need to understand is <em>WAR</em>. <a href="https://www.fangraphs.com/library/misc/war/">WAR</a> attempts to encapsulate a player’s yearly contribution into one statistic. <em>JAWS</em> is calculated by taking the average of a player’s total WAR over their career and the sum of their seven highest WAR values. The JAWS statistic is meant to be a starting point in the discussion of a nominee’s creditials for the Hall of Fame. Jaffe provides a thorough explanation <a href="https://www.si.com/mlb/2017/11/27/hall-fame-jaws-intro-2018-ballot">here</a>. There’s also a more succinct description at <a href="https://www.baseball-reference.com/about/jaws.shtml">Baseball-Reference</a>.</p>
-<p>The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise’s Hall of Fame. Instead of career WAR, we’ll be using WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.</p>
+<p>The question is can JAWS, whose domain of applicability is the MLB Hall of Fame, be applied to a franchise’s Hall of Fame. Instead of career WAR, we’ll be using only the WAR the player accrued while he played for the Cincinnati Reds. The likely sticking point is the seven year qualification since free agency makes it less likely that players remain with a team for that length of duration. The number of inductees in a franchise hall of fame probably is considerably less than the MLB hall of fame, so the trick will be to chose a tenure long enough to qualify a high percentage of the inductees and still allow JAWS to provide an adequate measure.</p>
 </div>
 <div id="scrape-hall-of-fame-inductee-names" class="section level2">
 <h2>Scrape Hall of Fame Inductee Names</h2>
@@ -219,8 +219,16 @@ warDat &lt;- indWar %&gt;%
 <p>Jaffe makes this determination by calculating the total WAR at each position and selecting the position with the greatest value. Currently, I can’t find a relatively convenient way to obtain the necessary data to make that calculation. We’ll make our determination by using the <code>Lahman</code> package and its <code>Fielding</code> data set to find the position which has the most games played as a Red.</p>
 <pre class="r"><code>library(Lahman)
 
-
-# Fielding dataset has different designations for 1800&#39;s Reds teams: CN1 and CN2.
+head(Fielding, 3)</code></pre>
+<pre><code>##    playerID yearID stint teamID lgID POS  G GS InnOuts PO  A  E DP PB WP
+## 1 abercda01   1871     1    TRO   NA  SS  1 NA      NA  1  3  2  0 NA NA
+## 2  addybo01   1871     1    RC1   NA  2B 22 NA      NA 67 72 42  5 NA NA
+## 3  addybo01   1871     1    RC1   NA  SS  3 NA      NA  8 14  7  0 NA NA
+##   SB CS ZR
+## 1 NA NA NA
+## 2 NA NA NA
+## 3 NA NA NA</code></pre>
+<pre class="r"><code># Fielding dataset has different designations for 1800&#39;s Reds teams: CN1 and CN2.
 posDat &lt;- map2_dfr(warDat$playerId, warDat$yearId, function(x,y) {
       filter(Fielding, playerID == x &amp; yearID == y)}) %&gt;% 
       filter(teamID == &quot;CIN&quot; | teamID == &quot;CN1&quot; | teamID == &quot;CN2&quot;)
@@ -248,6 +256,15 @@ glimpse(posDat)</code></pre>
 ## $ playerId &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;b...
 ## $ POS      &lt;chr&gt; &quot;1B&quot;, &quot;OF&quot;, &quot;C&quot;, &quot;P&quot;, &quot;P&quot;, &quot;3B&quot;, &quot;P&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;C&quot;,...</code></pre>
 <p>The outfield position can be further divided into right field, center field, and left field using the <code>Appearances</code> data set in <code>Lahman</code>. It would be desirable to also split the pitching position into relief and starting but unfortunately the <code>Lahman</code> package doesn’t afford us this capability explicitly. I think the information could be derived from the games started statistic and some others but that task will have be left for another time.</p>
+<pre class="r"><code>head(Appearances, 3)</code></pre>
+<pre><code>##   yearID teamID lgID  playerID G_all GS G_batting G_defense G_p G_c G_1b
+## 1   1871    TRO   NA abercda01     1 NA         1         1   0   0    0
+## 2   1871    RC1   NA  addybo01    25 NA        25        25   0   0    0
+## 3   1871    CL1   NA allisar01    29 NA        29        29   0   0    0
+##   G_2b G_3b G_ss G_lf G_cf G_rf G_of G_dh G_ph G_pr
+## 1    0    0    1    0    0    0    0   NA   NA   NA
+## 2   22    0    3    0    0    0    0   NA   NA   NA
+## 3    2    0    0    0   29    0   29   NA   NA   NA</code></pre>
 <pre class="r"><code># Get outfielder IDs
 ofDat &lt;- posDat %&gt;% 
       filter(POS == &quot;OF&quot;)
@@ -286,7 +303,7 @@ posDat &lt;- posDat %&gt;%
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played per position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
+<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
@@ -298,5 +315,8 @@ posDat &lt;- posDat %&gt;%
 </p>
 <p>
 <a id='bib-Wickham_2016'></a><a href="#cite-Wickham_2016">[3]</a><cite> H. Wickham. <em>rvest: Easily Harvest (Scrape) Web Pages</em>. R package version 0.3.2. 2016. URL: <a href="https://CRAN.R-project.org/package=rvest">https://CRAN.R-project.org/package=rvest</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2017'></a><a href="#cite-Wickham_2017">[4]</a><cite> H. Wickham. <em>tidyverse: Easily Install and Load the ‘Tidyverse’</em>. R package version 1.2.1. 2017. URL: <a href="https://CRAN.R-project.org/package=tidyverse">https://CRAN.R-project.org/package=tidyverse</a>.</cite>
 </p>
 </div>
