@@ -1,24 +1,21 @@
 ---
-title: A Baseball Dashboard in Time for Baseball Season
+title: A Baseball Dashboard in Time for Baseball Season (part one)
 author: Eric Book
 date: '2018-03-09'
-slug: a-baseball-dashboard-in-time-for-baseball-season
 categories:
-  - shiny
-  - sports-analysis
-  - scraping
   - eda
+  - scraping
+  - sports-analysis
 tags:
-  - shiny
-  - outliers
+  - Lahman
+  - openWARData
   - rvest
-  - ggridges
-  - DT
-draft: FALSE
+slug: a-baseball-dashboard-in-time-for-baseball-season-part-one
+draft: no
 output:
-      blogdown::html_page:
-            toc: true
-            toc_depth: 2
+  blogdown::html_page:
+    toc: yes
+    toc_depth: 2
 ---
 
 
@@ -28,6 +25,8 @@ output:
 <li><a href="#scrape-hall-of-fame-inductee-names">Scrape Hall of Fame Inductee Names</a></li>
 <li><a href="#war-values">WAR Values</a></li>
 <li><a href="#eda">EDA</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a></li>
 </ul>
 </div>
 
@@ -86,11 +85,13 @@ idTTa &lt;- idTT %&gt;%
       mutate(name_whole = paste(name_first, name_last))
 
 # Missing values come along for the ride so they need removed
-indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;))</code></pre>
+indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) {
+      filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)})</code></pre>
 <p>Some players were excluded from <code>indID</code> because in <code>members</code>, they have accent marks in their names. Likewise, a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.</p>
 <pre class="r"><code>missNamList &lt;- list(&quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave Concepcion&quot;, &quot;Ken Griffey&quot;,
                     &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
-indID &lt;- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)) %&gt;% 
+indID &lt;- map_dfr(missNamList, function(x) {
+      filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)}) %&gt;% 
       bind_rows(indID)</code></pre>
 <p>Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, Pedro Borbon, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.</p>
 <pre class="r"><code>indID &lt;- filter(indID, key_bbref != &quot;rosepe02&quot; &amp; key_bbref != &quot;morgajo01&quot;
@@ -108,19 +109,22 @@ glimpse(indID)</code></pre>
 <p>Now for the nominees,</p>
 <pre class="r"><code>nomNamList &lt;- list(&quot;Aaron Boone&quot;, &quot;Adam Dunn&quot;, &quot;John Franco&quot;, &quot;Danny Graves&quot;, &quot;Scott Rolen&quot;,
                    &quot;Reggie Sanders&quot;)
-nomID &lt;- map_dfr(nomNamList, function(x) filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;))
+nomID &lt;- map_dfr(nomNamList, function(x) {
+      filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)})
 
 # Snagged an extra Reggie Sanders
 nomID &lt;- filter(nomID, key_bbref != &quot;sandere01&quot;)</code></pre>
-<p>We have IDs for the inductees and nominees, so now we can get those WAR values. Also, we only want the seasons played in a Reds uniform.</p>
+<p>We have IDs for the inductees and nominees, so now we can get those Reds WAR values.</p>
 <pre class="r"><code># Inductees
-indWar &lt;- map_dfr(as.character(indID$key_bbref), function(x) filter(rWAR, playerId == x)) %&gt;%
+indWar &lt;- map_dfr(as.character(indID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %&gt;%
       select(playerId, yearId, teamId, rWAR) %&gt;%
       mutate_if(is.factor, as.character) %&gt;% 
       filter(teamId == &quot;CIN&quot;)
 
 # Nominees
-nomWar &lt;- map_dfr(as.character(nomID$key_bbref), function(x) filter(rWAR, playerId == x)) %&gt;%
+nomWar &lt;- map_dfr(as.character(nomID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %&gt;%
       select(playerId, yearId, teamId, rWAR) %&gt;%
       mutate_if(is.factor, as.character) %&gt;% 
       filter(teamId == &quot;CIN&quot;)
@@ -137,7 +141,7 @@ glimpse(indWar)</code></pre>
 <h2>EDA</h2>
 <div id="tenure" class="section level3">
 <h3>Tenure</h3>
-<p>We can now turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.</p>
+<p>We can next turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.</p>
 <pre class="r"><code># Inductees
 indYrs &lt;- indWar %&gt;%
       group_by(playerId) %&gt;% 
@@ -201,32 +205,28 @@ Cutoff
 </tbody>
 </table>
 <p>Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn’t part of this class, I’d consider five years but wouldn’t go above five.</p>
-<p>So the inductees that didn’t make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren’t in there. They played with the Reds before 1871 and their WAR wasn’t available.</p>
+<p>So the inductees that didn’t make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren’t in there. They played with the Reds prior to 1871 and their WAR wasn’t available. Our final inductee pool has 76 players.</p>
 <pre class="r"><code>indWar &lt;- filter(indWar, playerId != &quot;grangwa01&quot; &amp; playerId != &quot;mckecbi01&quot;
                      &amp; playerId != &quot;werbebi01&quot; &amp; playerId != &quot;wrighge01&quot;
                      &amp; playerId != &quot;wrighha01&quot;)
-glimpse(indWar)</code></pre>
-<pre><code>## Observations: 713
-## Variables: 4
-## $ playerId &lt;chr&gt; &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;...
-## $ yearId   &lt;int&gt; 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926,...
-## $ teamId   &lt;chr&gt; &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN...
-## $ rWAR     &lt;dbl&gt; -0.14, 1.14, 4.56, 4.96, 3.10, 10.77, 2.55, 6.56, 1.1...</code></pre>
+
+warDat &lt;- indWar %&gt;% 
+      bind_rows(nomWar)</code></pre>
 </div>
 <div id="position" class="section level3">
 <h3>Position</h3>
-<p>Next, we need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it’s usually done by position. So, if were to examine Scott Rolen’s case, we’d look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo.</p>
+<p>We need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it’s usually done by position. So, if we were to examine Scott Rolen’s case, we’d look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo.</p>
 <p>Jaffe makes this determination by calculating the total WAR at each position and selecting the position with the greatest value. Currently, I can’t find a relatively convenient way to obtain the necessary data to make that calculation. We’ll make our determination by using the <code>Lahman</code> package and its <code>Fielding</code> data set to find the position which has the most games played as a Red.</p>
 <pre class="r"><code>library(Lahman)
 
-# Inductees
 
 # Fielding dataset has different designations for 1800&#39;s Reds teams: CN1 and CN2.
-posDat_i &lt;- map2_dfr(indWar$playerId, indWar$yearId, function(x,y) filter(Fielding, playerID == x &amp; yearID == y)) %&gt;% 
+posDat &lt;- map2_dfr(warDat$playerId, warDat$yearId, function(x,y) {
+      filter(Fielding, playerID == x &amp; yearID == y)}) %&gt;% 
       filter(teamID == &quot;CIN&quot; | teamID == &quot;CN1&quot; | teamID == &quot;CN2&quot;)
 
 # Getting position with most games as a Red
-posDat_i &lt;- posDat_i %&gt;%
+posDat &lt;- posDat %&gt;%
       select(playerID, POS, G) %&gt;% 
       group_by(playerID, POS) %&gt;% 
       summarize(sumG = sum(G)) %&gt;% 
@@ -234,31 +234,69 @@ posDat_i &lt;- posDat_i %&gt;%
       ungroup() %&gt;% 
       select(playerID, POS)
 
-# Jim O&#39;Toole&#39;s ID isn&#39;t showing up in the Fielding data set but he was a pitcher his whole career. Double-checked. Adding him to the df.
-# Renaming playerID to join with another dataframe
-setdiff(indWar$playerId, posDat_i$playerID)</code></pre>
+
+# Jim O&#39;Toole&#39;s Baseball-Reference ID in the Fielding data set is incorrect but he was a pitcher his whole career. Adding him to the df.
+setdiff(warDat$playerId, posDat$playerID)</code></pre>
 <pre><code>## [1] &quot;o&#39;tooji01&quot;</code></pre>
-<pre class="r"><code>posDat_i &lt;- posDat_i %&gt;% 
+<pre class="r"><code>posDat &lt;- posDat %&gt;% 
       add_row(playerID = &quot;o&#39;tooji01&quot;, POS = &quot;P&quot;) %&gt;% 
       rename(playerId = playerID)
 
-glimpse(posDat_i)</code></pre>
-<pre><code>## Observations: 76
+glimpse(posDat)</code></pre>
+<pre><code>## Observations: 82
 ## Variables: 2
 ## $ playerId &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;b...
-## $ POS      &lt;chr&gt; &quot;1B&quot;, &quot;OF&quot;, &quot;C&quot;, &quot;P&quot;, &quot;P&quot;, &quot;P&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;C&quot;, &quot;SS&quot;,...</code></pre>
-<pre class="r"><code># Nominees
+## $ POS      &lt;chr&gt; &quot;1B&quot;, &quot;OF&quot;, &quot;C&quot;, &quot;P&quot;, &quot;P&quot;, &quot;3B&quot;, &quot;P&quot;, &quot;OF&quot;, &quot;P&quot;, &quot;C&quot;,...</code></pre>
+<p>The outfield position can be further divided into right field, center field, and left field using the <code>Appearances</code> data set in <code>Lahman</code>. It would be desirable to also split the pitching position into relief and starting but unfortunately the <code>Lahman</code> package doesn’t afford us this capability explicitly. I think the information could be derived from the games started statistic and some others but that task will have be left for another time.</p>
+<pre class="r"><code># Get outfielder IDs
+ofDat &lt;- posDat %&gt;% 
+      filter(POS == &quot;OF&quot;)
 
-posDat_n &lt;- map2_dfr(nomWar$playerId, nomWar$yearId, function(x,y) filter(Fielding, playerID == x &amp; yearID == y)) %&gt;% 
-      filter(teamID == &quot;CIN&quot; | teamID == &quot;CN1&quot; | teamID == &quot;CN2&quot;)
+# Get yearId from warDat
+ofYears &lt;- map_dfr(ofDat$playerId, function(x) {
+      filter(warDat, playerId == x)
+})
+      
+# Number of games played at each OF position for each season
+ofSplit &lt;- map2_dfr(ofYears$playerId, ofYears$yearId, function(x,y) {
+      filter(Appearances, playerID == x &amp; yearID == y)}) %&gt;% 
+      rename(LF = G_lf, CF = G_cf, RF = G_rf) %&gt;% 
+      gather(&#39;LF&#39;, &#39;CF&#39;, &#39;RF&#39;, key = &quot;POS&quot;, value = &quot;G&quot;)
 
-posDat_n &lt;- posDat_n %&gt;%
-      select(playerID, POS, G) %&gt;% 
-      group_by(playerID, POS) %&gt;% 
+# Primary outfield position = most games played at that position
+splitSum &lt;- ofSplit %&gt;% 
+      select(playerID, POS, G) %&gt;%
+      rename(playerId = playerID) %&gt;%
+      group_by(playerId, POS) %&gt;% 
       summarize(sumG = sum(G)) %&gt;% 
       filter(sumG == max(sumG)) %&gt;% 
       ungroup() %&gt;% 
-      select(playerID, POS) %&gt;% 
-      rename(playerId = playerID)</code></pre>
+      select(playerId, POS)
+
+# Replacing &quot;OF&quot; values in posDat
+ofPos &lt;- posDat %&gt;% 
+      filter(POS == &quot;OF&quot;) %&gt;% 
+      select(-POS) %&gt;% 
+      inner_join(splitSum, by = &quot;playerId&quot;)
+
+posDat &lt;- posDat %&gt;% 
+      filter(POS != &quot;OF&quot;) %&gt;%
+      bind_rows(ofPos)</code></pre>
 </div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played per position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>
+<a id='bib-Baumer_2015'></a><a href="#cite-Baumer_2015">[1]</a><cite> B. Baumer and G. Matthews. <em>openWARData: Data Associated with openWAR</em>. R package version 0.1.1.9004. 2015. URL: <a href="https://github.com/beanumber/openWARData">https://github.com/beanumber/openWARData</a>.</cite>
+</p>
+<p>
+<a id='bib-Friendly_2017'></a><a href="#cite-Friendly_2017">[2]</a><cite> M. Friendly. <em>Lahman: Sean ‘Lahman’ Baseball Database</em>. R package version 6.0-0. 2017. URL: <a href="https://CRAN.R-project.org/package=Lahman">https://CRAN.R-project.org/package=Lahman</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2016'></a><a href="#cite-Wickham_2016">[3]</a><cite> H. Wickham. <em>rvest: Easily Harvest (Scrape) Web Pages</em>. R package version 0.3.2. 2016. URL: <a href="https://CRAN.R-project.org/package=rvest">https://CRAN.R-project.org/package=rvest</a>.</cite>
+</p>
 </div>

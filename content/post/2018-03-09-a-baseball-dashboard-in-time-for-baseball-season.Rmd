@@ -1,30 +1,32 @@
 ---
-title: A Baseball Dashboard in Time for Baseball Season
+title: A Baseball Dashboard in Time for Baseball Season (part one)
 author: Eric Book
 date: '2018-03-09'
-slug: a-baseball-dashboard-in-time-for-baseball-season
 categories:
-  - shiny
-  - sports-analysis
-  - scraping
   - eda
+  - scraping
+  - sports-analysis
 tags:
-  - shiny
-  - outliers
+  - Lahman
+  - openWARData
   - rvest
-  - ggridges
-  - DT
-draft: FALSE
+slug: a-baseball-dashboard-in-time-for-baseball-season-part-one
+draft: no
 output:
-      blogdown::html_page:
-            toc: true
-            toc_depth: 2
+  blogdown::html_page:
+    toc: yes
+    toc_depth: 2
 ---
 
 
 
 ```{r emo, include=FALSE}
 library(emo)
+library(knitcitations)
+cleanbib()
+cite_options(hyperlink = 'to.doc', citation_format = 'text', style = 'html')
+citet(c(citation('rvest'), citation('openWARData'), citation('Lahman')))
+         
 ```
 
 
@@ -39,7 +41,7 @@ blogdown::shortcode("tweet", "900033162771910656")
 
 Baseball fan? `r emo::ji("ballot_box_with_check")` Math? `r emo::ji("ballot_box_with_check")` Computers skills? `r emo::ji("ballot_box_with_check")`
 
-It's always nice when project ideas fall into your lap. Let's build an dashboard that can be used to evaluate the 2018 Reds Hall of Fame nominees.
+It's always nice when project ideas fall into your lap. Let's build an dashboard that can be used to evaluate nominees for a franchise's hall of fame.
 
 ## JAWS
 
@@ -120,7 +122,8 @@ idTTa <- idTT %>%
       mutate(name_whole = paste(name_first, name_last))
 
 # Missing values come along for the ride so they need removed
-indID <- map_dfr(members[,"Inductee"], function(x) filter(idTTa, name_whole == x & key_bbref != ""))
+indID <- map_dfr(members[,"Inductee"], function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")})
 
 ```
 
@@ -131,7 +134,8 @@ Some players were excluded from `indID` because in `members`, they have accent m
 ```{r id-missname}
 missNamList <- list("Dolf Luque", "Leo Cardenas", "Tony Perez", "Dave Concepcion", "Ken Griffey",
                     "Jose Rijo", "Cesar Geronimo", "Pedro Borbon")
-indID <- map_dfr(missNamList, function(x) filter(idTTa, name_whole == x & key_bbref != "")) %>% 
+indID <- map_dfr(missNamList, function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")}) %>% 
       bind_rows(indID)
 ```
 
@@ -154,25 +158,28 @@ Now for the nominees,
 ```{r id-nom}
 nomNamList <- list("Aaron Boone", "Adam Dunn", "John Franco", "Danny Graves", "Scott Rolen",
                    "Reggie Sanders")
-nomID <- map_dfr(nomNamList, function(x) filter(idTTa, name_whole == x & key_bbref != ""))
+nomID <- map_dfr(nomNamList, function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")})
 
 # Snagged an extra Reggie Sanders
 nomID <- filter(nomID, key_bbref != "sandere01")
 ```
 
 
-We have IDs for the inductees and nominees, so now we can get those WAR values. Also, we only want the seasons played in a Reds uniform.
+We have IDs for the inductees and nominees, so now we can get those Reds WAR values.
 
 ```{r war-val}
 
 # Inductees
-indWar <- map_dfr(as.character(indID$key_bbref), function(x) filter(rWAR, playerId == x)) %>%
+indWar <- map_dfr(as.character(indID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %>%
       select(playerId, yearId, teamId, rWAR) %>%
       mutate_if(is.factor, as.character) %>% 
       filter(teamId == "CIN")
 
 # Nominees
-nomWar <- map_dfr(as.character(nomID$key_bbref), function(x) filter(rWAR, playerId == x)) %>%
+nomWar <- map_dfr(as.character(nomID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %>%
       select(playerId, yearId, teamId, rWAR) %>%
       mutate_if(is.factor, as.character) %>% 
       filter(teamId == "CIN")
@@ -187,7 +194,7 @@ glimpse(indWar)
 
 ### Tenure
 
-We can now turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.
+We can next turn our attention to making a decision on our central quandary: how long should our tenure requirement be? If we look at tables of the different values, we can calculate the percentage of players that would remain at each cutoff.
 
 ```{r eda-ind-yrs}
 # Inductees
@@ -228,19 +235,21 @@ format = "html") %>%
 
 Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn't part of this class, I'd consider five years but wouldn't go above five.
 
-So the inductees that didn't make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren't in there. They played with the Reds before 1871 and their WAR wasn't available.
+So the inductees that didn't make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren't in there. They played with the Reds prior to 1871 and their WAR wasn't available. Our final inductee pool has 76 players.
 
 ```{r eda-cut, options}
 indWar <- filter(indWar, playerId != "grangwa01" & playerId != "mckecbi01"
                      & playerId != "werbebi01" & playerId != "wrighge01"
                      & playerId != "wrighha01")
-glimpse(indWar)
+
+warDat <- indWar %>% 
+      bind_rows(nomWar)
 ```
 
 
 ### Position
 
-Next, we need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it's usually done by position. So, if were to examine Scott Rolen's case, we'd look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo. 
+We need to figure out the primary positions for players as they tend to play multiple positions during their career. When comparing JAWS scores between inductees and nominees, it's usually done by position. So, if we were to examine Scott Rolen's case, we'd look at his JAWS score and compare it to other Reds third basemen such as Frank Robinson or Chris Sabo. 
 
 Jaffe makes this determination by calculating the total WAR at each position and selecting the position with the greatest value. Currently, I can't find a relatively convenient way to obtain the necessary data to make that calculation. We'll make our determination by using the `Lahman` package and its `Fielding` data set to find the position which has the most games played as a Red.
 
@@ -249,14 +258,14 @@ Jaffe makes this determination by calculating the total WAR at each position and
 
 library(Lahman)
 
-# Inductees
 
 # Fielding dataset has different designations for 1800's Reds teams: CN1 and CN2.
-posDat_i <- map2_dfr(indWar$playerId, indWar$yearId, function(x,y) filter(Fielding, playerID == x & yearID == y)) %>% 
+posDat <- map2_dfr(warDat$playerId, warDat$yearId, function(x,y) {
+      filter(Fielding, playerID == x & yearID == y)}) %>% 
       filter(teamID == "CIN" | teamID == "CN1" | teamID == "CN2")
 
 # Getting position with most games as a Red
-posDat_i <- posDat_i %>%
+posDat <- posDat %>%
       select(playerID, POS, G) %>% 
       group_by(playerID, POS) %>% 
       summarize(sumG = sum(G)) %>% 
@@ -264,27 +273,66 @@ posDat_i <- posDat_i %>%
       ungroup() %>% 
       select(playerID, POS)
 
-# Jim O'Toole's Baseball-Reference ID in the Fielding data set is incorrect but he was a pitcher his whole career. Double-checked. Adding him to the df.
-# Renaming playerID to join with another dataframe later
-setdiff(indWar$playerId, posDat_i$playerID)
-posDat_i <- posDat_i %>% 
+
+# Jim O'Toole's Baseball-Reference ID in the Fielding data set is incorrect but he was a pitcher his whole career. Adding him to the df.
+setdiff(warDat$playerId, posDat$playerID)
+posDat <- posDat %>% 
       add_row(playerID = "o'tooji01", POS = "P") %>% 
       rename(playerId = playerID)
 
-glimpse(posDat_i)
+glimpse(posDat)
 
-# Nominees
+```
 
-posDat_n <- map2_dfr(nomWar$playerId, nomWar$yearId, function(x,y) filter(Fielding, playerID == x & yearID == y)) %>% 
-      filter(teamID == "CIN" | teamID == "CN1" | teamID == "CN2")
+The outfield position can be further divided into right field, center field, and left field using the `Appearances` data set in `Lahman`. It would be desirable to also split the pitching position into relief and starting but unfortunately the `Lahman` package doesn't afford us this capability explicitly. I think the information could be derived from the games started statistic and some others but that task will have be left for another time.
 
-posDat_n <- posDat_n %>%
-      select(playerID, POS, G) %>% 
-      group_by(playerID, POS) %>% 
+```{r eda-of}
+
+# Get outfielder IDs
+ofDat <- posDat %>% 
+      filter(POS == "OF")
+
+# Get yearId from warDat
+ofYears <- map_dfr(ofDat$playerId, function(x) {
+      filter(warDat, playerId == x)
+})
+      
+# Number of games played at each OF position for each season
+ofSplit <- map2_dfr(ofYears$playerId, ofYears$yearId, function(x,y) {
+      filter(Appearances, playerID == x & yearID == y)}) %>% 
+      rename(LF = G_lf, CF = G_cf, RF = G_rf) %>% 
+      gather('LF', 'CF', 'RF', key = "POS", value = "G")
+
+# Primary outfield position = most games played at that position
+splitSum <- ofSplit %>% 
+      select(playerID, POS, G) %>%
+      rename(playerId = playerID) %>%
+      group_by(playerId, POS) %>% 
       summarize(sumG = sum(G)) %>% 
       filter(sumG == max(sumG)) %>% 
       ungroup() %>% 
-      select(playerID, POS) %>% 
-      rename(playerId = playerID)
+      select(playerId, POS)
 
+# Replacing "OF" values in posDat
+ofPos <- posDat %>% 
+      filter(POS == "OF") %>% 
+      select(-POS) %>% 
+      inner_join(splitSum, by = "playerId")
+
+posDat <- posDat %>% 
+      filter(POS != "OF") %>%
+      bind_rows(ofPos)
+
+```
+
+
+## Conclusion
+
+We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification. Lastly, primary player positions were determined by the greatest number of games played per position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
+
+
+## References
+
+```{r bib, results='asis', echo=FALSE}
+bibliography(style = 'html')
 ```
