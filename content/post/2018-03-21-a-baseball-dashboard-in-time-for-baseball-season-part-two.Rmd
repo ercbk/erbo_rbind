@@ -11,7 +11,7 @@ tags:
   - ggiraph
   - shiny
   - dt
-draft: yes
+draft: no
 output:
   blogdown::html_page:
     toc: yes
@@ -24,7 +24,7 @@ output:
 library(knitcitations)
 cleanbib()
 cite_options(hyperlink = 'to.doc', citation_format = 'text', style = 'html')
-citet(c(citation('tidyverse'), citation('ggiraph')))
+citet(c(citation('tidyverse'), citation('plyr'), citation('knitcitations')))
 ```
 
 
@@ -163,14 +163,14 @@ blogdown::shortcode("tweet", "900033162771910656")
 ```
 
 
-In [part one](), we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
+In [part one](), we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we'll perform the JAWS calculations and create dataframes that will be needed for the `shinydashboard`. Recall that for these calculations, you'll need `indWar`, `nomWar`, `posDat`, and `warDat` from part one.
 
 
 
 ## JAWS Calculation
 
 
-Words
+To compute the JAWS values, we'll take the average of the sum of the top four WAR values and the sum of the WAR accrued while playing for the Reds
 
 
 ```{r jaws, message=FALSE}
@@ -196,6 +196,297 @@ warJaws <- warSum %>%
       mutate(JAWS4 = round((WARtenure + WAR4)/2, 2)) %>% 
       select(playerId, WARtenure, WAR4, JAWS4)
 
-glimpse(warJaws)
+# Add Names and Positions to dataframe
+names <- warDat %>% 
+      select(playerId, Name) %>% 
+      distinct()
 
+warJaws <- warJaws %>%
+      inner_join(posDat, by = 'playerId') %>% 
+      inner_join(names, by = 'playerId') %>% 
+      select(playerId, Name, POS, everything())
+
+
+head(warJaws, 3)
+
+```
+
+
+## Weighting Positions and Averages
+
+The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we'll add "average" players to each position pool to reduce the bias. Pitchers aren't compared to positional players statistically so there will be two sets of average calculations that we'll be doing later. They also aren't subdivided into Starting and Relief so there will be no need to add players to their pool.
+
+```{r wt-tab}
+
+# Only want inductees in our average calculation
+indJaws <- warJaws %>% 
+      anti_join(nomWar, by = 'playerId')
+
+batJaws <- indJaws %>%
+      select(-playerId) %>% 
+      filter(POS != "P")
+
+# 1B and CF are highest with 10 members a piece so they won't need filler players
+table(batJaws$POS)
+```
+
+First base and Center Field have the most players so we'll add "average" players to the other position pools until the amounts are equal.
+
+```{r label, options}
+
+# Number of filler players needed at each position
+neededPOS <- batJaws %>%
+      group_by(POS) %>%
+      summarize(n = n()) %>% 
+      mutate(remPOS = max(n) - n) %>%
+      filter(POS != "1B", POS != "CF") %>%
+      select(-n)
+
+# List of lists with filler position amounts
+posLL <- map2(neededPOS$POS, neededPOS$remPOS, function(POS, n) {
+      POS <- rep(POS, n)
+})
+
+# Create tibble with all the filler players for each position
+
+# Empty tibble
+posFillTib <- tibble(
+      Name = character(),
+      POS = character(),
+      WARtenure = numeric(),
+      WAR4 = numeric(),
+      JAWS4 = numeric()
+      
+)
+
+# input: Position; function creates one filler player with avgHOF stats
+fillPOS <- function(POS) {
+      posFillTib <- posFillTib %>%
+            add_row(Name = "avgHOFplayer",
+                    POS = POS,
+                    WARtenure = median(batJaws$WARtenure),
+                    WAR4 = median(batJaws$WAR4),
+                    JAWS4 = median(batJaws$JAWS4)
+                    
+            )
+}
+# List of lists fed to function; outputs tibble of filler players
+fillerPlayers <- map_dfr(posLL, fillPOS)
+
+# Creating weighted distribution of position players
+wtBatDistr <- batJaws %>%
+      bind_rows(fillerPlayers)
+
+head(wtBatDistr, 3)
+
+```
+
+We can now calculate the averages using some cool, nested `purrr::map` action.
+
+```{r wt-avg}
+# Calculate weighted averages at each position
+wbd_nested <- wtBatDistr %>% 
+      group_by(POS) %>% 
+      nest()
+
+wt_avg_FUN <- function(df) {
+      mutate(df, `Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+}
+
+wbd_avgs <- wbd_nested %>% 
+      mutate(stats = map(data, wt_avg_FUN)) %>% 
+      select(POS, stats) %>% 
+      unnest() %>% 
+      select(Name, POS, everything()) %>% 
+      filter(Name != "avgHOFplayer")
+
+head(wbd_avgs, 3)
+
+```
+
+
+## Create Dataframes for Visuals
+
+### DataTable
+
+Our first visual will be a `DT` datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines. Then pitcher averages are figured, and everything is combined into one dataframe.
+
+```{r vis-tab, message=FALSE}
+
+# Get positional player nominees
+nomBatJaws <- warJaws %>% 
+      anti_join(indWar, by = 'playerId') %>% 
+      filter(POS != "P") %>% 
+      select(-playerId)
+
+# Sync averages to nominee positions and combine with inductee averages dataframe
+wtBatJaws <- nomBatJaws %>% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR`) %>% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR4`) %>% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg JAWS4`) %>% as.numeric()) %>% 
+      bind_rows(wbd_avgs)
+
+
+# Pitcher averages
+pitJaws <- warJaws %>% 
+      anti_join(nomWar, by = 'playerId') %>% 
+      select(-playerId) %>% 
+      filter(POS == "P") %>%
+      mutate(`Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+
+# Get pitcher Nominees
+nomPitJaws <- warJaws %>% 
+      anti_join(indWar, by = 'playerId') %>% 
+      filter(POS == "P") %>% 
+      select(-playerId)
+
+# Sync (pitcher pool not actually weighted)
+wtPitJaws <- nomPitJaws %>% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR`) %>% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR4`) %>% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg JAWS4`) %>% as.numeric()) %>% 
+      bind_rows(pitJaws)
+
+
+display_table <- wtBatJaws %>% 
+      bind_rows(wtPitJaws) %>% 
+      arrange(Name)
+
+head(display_table, 3)
+```
+
+
+### Cleveland Dot Charts
+
+When comparing position players, position to position isn't the only comparison that can be made. In some situations, it's more fair to look at wider, positional group statistics. There are five groups that we'll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Charts.
+
+
+```{r vis-dot, message=FALSE}
+
+# Build df with group positions
+cornerIF <- warJaws %>% 
+      filter(POS == "1B" | POS == "3B") %>%
+      mutate(POS = plyr::mapvalues(POS, from = c("1B", "3B"), to = c("CI", "CI")))
+
+middleIF <- warJaws %>% 
+      filter(POS == "2B" | POS == "SS") %>%
+      mutate(POS = plyr::mapvalues(POS, from = c("2B", "SS"), to = c("MI", "MI")))
+
+outField <- warJaws %>% 
+      filter(POS == "LF" | POS == "CF" | POS == "RF") %>%
+      mutate(POS = plyr::mapvalues(POS, from = c("LF", "CF", "RF"), to = c("OF", "OF", "OF")))
+
+corners <- warJaws %>% 
+      filter(POS == "1B" | POS == "3B" | POS == "LF" | POS == "RF") %>% 
+      mutate(POS = plyr::mapvalues(POS, from = c("1B", "LF", "RF", "3B"), to = c("CO", "CO", "CO", "CO")))
+
+middle <- warJaws %>% 
+      filter(POS == "2B" | POS == "SS" | POS == "C" | POS == "CF") %>% 
+      mutate(POS = plyr::mapvalues(POS, from = c("2B", "SS", "C", "CF"), to = c("Md", "Md", "Md", "Md")))
+
+other_groups <- cornerIF %>% 
+      bind_rows(middleIF, outField, corners, middle)
+
+
+# Calculate averages of each group
+
+other_groups_i <- other_groups %>% 
+      anti_join(nomWar, by = 'playerId')
+
+og_nested <- other_groups_i %>% 
+      group_by(POS) %>% 
+      nest()
+
+avg_FUN <- function(df) {
+      mutate(df, WAR_avg = round(mean(WARtenure), 1), WAR4_avg = round(mean(WAR4), 1), JAWS_avg = round(mean(JAWS4), 1))
+}
+
+group_avgs_i <- og_nested %>% 
+      mutate(stats = map(data, avg_FUN)) %>% 
+      select(POS, stats) %>% 
+      unnest() %>% 
+      select(playerId, Name, POS, everything())
+
+# Add Nominees
+
+other_groups_n <- other_groups %>% 
+      anti_join(indWar, by = 'playerId')
+
+group_avgs <- other_groups_n %>% 
+      mutate(WAR_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR_avg) %>% as.numeric(), WAR4_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR4_avg) %>% as.numeric(), JAWS_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$JAWS_avg) %>% as.numeric()) %>% 
+      bind_rows(group_avgs_i)
+
+# Prepare dataframe for JAWS dot chart
+dot_table <- display_table %>% 
+      rename(JAWS_avg = `Wt Avg JAWS4`, WAR_avg = `Wt Avg WAR`) %>% 
+      bind_rows(group_avgs)
+
+jaws_group <- dot_table %>% 
+      select(Name, POS, JAWS4, JAWS_avg) %>% 
+      rename(Group = POS, `Avg HOF` = JAWS_avg) %>% 
+      gather(key = "Stat", value = "Value", -c(Name, Group))
+
+# Prepare dataframe for WAR dot chart
+war_group <- dot_table %>% 
+      select(Name, POS, WARtenure, WAR_avg) %>% 
+      rename(Group = POS, `Avg HOF` = WAR_avg, WAR = WARtenure) %>% 
+      gather(key = "Stat", value = "Value", -c(Name, Group))
+
+glimpse(war_group)
+
+```
+
+
+### Interactive Line Chart
+
+In the final visual, we'll show player WAR values for each season played with the Reds, plus, add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.
+
+```{r vis-line}
+
+# WAR4 + years; add type column
+war4Dat <- warDat %>%
+      group_by(playerId) %>%
+      top_n(4, rWAR) %>% 
+      ungroup() %>% 
+      select(-teamId) %>% 
+      add_column(type = rep("WAR4", 328))
+
+# Not WAR4 + years; add type column
+notWar4 <- warDat %>% 
+      anti_join(war4Dat, by = c("playerId", "yearId")) %>% 
+      select(-teamId) %>% 
+      add_column(type = rep("WAR", 427))
+
+war_combined <- notWar4 %>% 
+      bind_rows(war4Dat)
+
+
+#  Positional and Pitcher seasonal average WAR values
+
+pitMedWar <- war_combined %>% 
+      filter(POS == "P") %>% 
+      summarize(`Median Pitcher WAR` = median(rWAR))
+
+posMedWAR <- war_combined %>% 
+      filter(POS != "P") %>% 
+      summarize(`Median Position WAR` = median(rWAR))
+
+war_combo_avg <- war_combined %>% 
+      mutate(`Median WAR` = if_else(POS == "P", pitMedWar$`Median Pitcher WAR`[[1]], posMedWAR$`Median Position WAR`[[1]])) %>% 
+      rename(bbref_id = playerId, WAR = rWAR) %>% 
+      select(bbref_id, Name, everything())
+
+```
+
+
+## Save Objects
+
+Only four objects will be required for the final post in this series: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`.
+
+
+## Conclusion
+
+In this post, we calculated the JAWS statistic and positional averages that we'll use to compare nominees and typical members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for part three.
+
+
+## References
+
+```{r bib, results='asis', echo=FALSE}
+bibliography(style = 'html')
 ```

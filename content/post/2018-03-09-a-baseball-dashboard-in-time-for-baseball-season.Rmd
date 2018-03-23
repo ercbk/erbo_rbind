@@ -346,9 +346,14 @@ warDat <- warDat %>%
 ```
 
 
+## Save Objects
+
+We've generated quite a few objects in part one of this series. If you'd like to keep your environment relatively clean, we'll only need a few of these going into the calculations of part two: `indWar`, `nomWar`, `posDat`, and `warDat`. 
+
+
 ## Conclusion
 
-We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
+We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we'll perform the calculations in part two and visualize them in a `shinydashboard` in part three.
 
 
 ## References

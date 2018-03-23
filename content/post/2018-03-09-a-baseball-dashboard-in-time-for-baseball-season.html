@@ -1,5 +1,5 @@
 ---
-title: A Baseball Dashboard in Time for Baseball Season (part one)
+title: A Baseball Dashboard in Time for Opening Day (part one)
 author: Eric Book
 date: '2018-03-09'
 categories:
@@ -10,7 +10,7 @@ tags:
   - Lahman
   - openWARData
   - rvest
-slug: a-baseball-dashboard-in-time-for-baseball-season-part-one
+slug: a-baseball-dashboard-in-time-for-opening-day-part-one
 draft: no
 output:
   blogdown::html_page:
@@ -25,6 +25,7 @@ output:
 <li><a href="#scrape-hall-of-fame-inductee-names">Scrape Hall of Fame Inductee Names</a></li>
 <li><a href="#war-values">WAR Values</a></li>
 <li><a href="#eda">EDA</a></li>
+<li><a href="#save-objects">Save Objects</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 <li><a href="#references">References</a></li>
 </ul>
@@ -92,7 +93,8 @@ indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) {
                     &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
 indID &lt;- map_dfr(missNamList, function(x) {
       filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)}) %&gt;% 
-      bind_rows(indID)</code></pre>
+      bind_rows(indID) %&gt;% 
+      mutate(name_whole = if_else(key_bbref == &quot;griffke02&quot;, &quot;Ken Griffey Jr&quot;, name_whole))</code></pre>
 <p>Not many people have original names, including baseball players, so we need to remove the extra Pete Rose (Jr.), Joe Morgan, Mike McCormick, Pedro Borbon, and George Wright. Sparky Anderson and Fred Hutchinson were managers so they can be dropped as well.</p>
 <pre class="r"><code>indID &lt;- filter(indID, key_bbref != &quot;rosepe02&quot; &amp; key_bbref != &quot;morgajo01&quot;
                     &amp; key_bbref != &quot;mccormi03&quot; &amp; key_bbref != &quot;andersp01&quot; 
@@ -122,16 +124,31 @@ indWar &lt;- map_dfr(as.character(indID$key_bbref), function(x) {
       mutate_if(is.factor, as.character) %&gt;% 
       filter(teamId == &quot;CIN&quot;)
 
-# Nominees
+# add Name column
+indWar &lt;- indID %&gt;% 
+      select(name_whole, key_bbref) %&gt;% 
+      rename(Name = name_whole, playerId = key_bbref) %&gt;% 
+      inner_join(indWar, by = &#39;playerId&#39;)</code></pre>
+<pre><code>## Warning: Column `playerId` joining factor and character vector, coercing
+## into character vector</code></pre>
+<pre class="r"><code># Nominees
 nomWar &lt;- map_dfr(as.character(nomID$key_bbref), function(x) {
       filter(rWAR, playerId == x)}) %&gt;%
       select(playerId, yearId, teamId, rWAR) %&gt;%
       mutate_if(is.factor, as.character) %&gt;% 
       filter(teamId == &quot;CIN&quot;)
 
-glimpse(indWar)</code></pre>
+# add Name column
+nomWar &lt;- nomID %&gt;% 
+      select(name_whole, key_bbref) %&gt;% 
+      rename(Name = name_whole, playerId = key_bbref) %&gt;% 
+      inner_join(nomWar, by = &#39;playerId&#39;)</code></pre>
+<pre><code>## Warning: Column `playerId` joining factor and character vector, coercing
+## into character vector</code></pre>
+<pre class="r"><code>glimpse(indWar)</code></pre>
 <pre><code>## Observations: 721
-## Variables: 4
+## Variables: 5
+## $ Name     &lt;chr&gt; &quot;Dolf Luque&quot;, &quot;Dolf Luque&quot;, &quot;Dolf Luque&quot;, &quot;Dolf Luque...
 ## $ playerId &lt;chr&gt; &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;luquedo01&quot;, &quot;...
 ## $ yearId   &lt;int&gt; 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926,...
 ## $ teamId   &lt;chr&gt; &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN&quot;, &quot;CIN...
@@ -298,12 +315,20 @@ ofPos &lt;- posDat %&gt;%
 
 posDat &lt;- posDat %&gt;% 
       filter(POS != &quot;OF&quot;) %&gt;%
-      bind_rows(ofPos)</code></pre>
+      bind_rows(ofPos)
+
+# Add POS column
+warDat &lt;- warDat %&gt;% 
+      inner_join(posDat, by = &#39;playerId&#39;)</code></pre>
 </div>
+</div>
+<div id="save-objects" class="section level2">
+<h2>Save Objects</h2>
+<p>We’ve generated quite a few objects in part one of this series. If you’d like to keep your environment relatively clean, we’ll only need a few of these going into the calculations of part two: <code>indWar</code>, <code>nomWar</code>, <code>posDat</code>, and <code>warDat</code>.</p>
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
+<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we’ll perform the calculations in part two and visualize them in a <code>shinydashboard</code> in part three.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>

@@ -1,8 +1,8 @@
 ---
-title: A Baseball Dashboard in Time for Baseball Season (part two)
+title: A Baseball Dashboard in Time for Opening Day (part two)
 author: Eric Book
 date: '2018-03-21'
-slug: a-baseball-dashboard-in-time-for-baseball-season-part-two
+slug: a-baseball-dashboard-in-time-for-opening-day-part-two
 categories:
   - sports-analysis
   - dashboards
@@ -11,7 +11,7 @@ tags:
   - ggiraph
   - shiny
   - dt
-draft: yes
+draft: no
 output:
   blogdown::html_page:
     toc: yes
@@ -22,15 +22,20 @@ output:
 <div id="TOC">
 <ul>
 <li><a href="#jaws-calculation">JAWS Calculation</a></li>
+<li><a href="#weighting-positions-and-averages">Weighting Positions and Averages</a></li>
+<li><a href="#create-dataframes-for-visuals">Create Dataframes for Visuals</a></li>
+<li><a href="#save-objects">Save Objects</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a></li>
 </ul>
 </div>
 
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
-<p>In <a href="">part one</a>, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
+<p>In <a href="">part one</a>, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the JAWS calculations and create dataframes that will be needed for the <code>shinydashboard</code>. Recall that for these calculations, you’ll need <code>indWar</code>, <code>nomWar</code>, <code>posDat</code>, and <code>warDat</code> from part one.</p>
 <div id="jaws-calculation" class="section level2">
 <h2>JAWS Calculation</h2>
-<p>Words</p>
+<p>To compute the JAWS values, we’ll take the average of the sum of the top four WAR values and the sum of the WAR accrued while playing for the Reds</p>
 <pre class="r"><code>library(tidyverse)
 
 # total WAR during Reds tenure
@@ -52,11 +57,301 @@ warJaws &lt;- warSum %&gt;%
       mutate(JAWS4 = round((WARtenure + WAR4)/2, 2)) %&gt;% 
       select(playerId, WARtenure, WAR4, JAWS4)
 
-glimpse(warJaws)</code></pre>
-<pre><code>## Observations: 82
+# Add Names and Positions to dataframe
+names &lt;- warDat %&gt;% 
+      select(playerId, Name) %&gt;% 
+      distinct()
+
+warJaws &lt;- warJaws %&gt;%
+      inner_join(posDat, by = &#39;playerId&#39;) %&gt;% 
+      inner_join(names, by = &#39;playerId&#39;) %&gt;% 
+      select(playerId, Name, POS, everything())
+
+
+head(warJaws, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 6
+##   playerId  Name         POS   WARtenure  WAR4 JAWS4
+##   &lt;chr&gt;     &lt;chr&gt;        &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 becklja01 Jake Beckley 1B         23.5  16.5  20.0
+## 2 bellgu01  Gus Bell     CF         13.0  12.4  12.7
+## 3 benchjo01 Johnny Bench C          75.0  30.4  52.7</code></pre>
+</div>
+<div id="weighting-positions-and-averages" class="section level2">
+<h2>Weighting Positions and Averages</h2>
+<p>The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we’ll add “average” players to each position pool to reduce the bias. Pitchers aren’t compared to positional players statistically so there will be two sets of average calculations that we’ll be doing later. They also aren’t subdivided into Starting and Relief so there will be no need to add players to their pool.</p>
+<pre class="r"><code># Only want inductees in our average calculation
+indJaws &lt;- warJaws %&gt;% 
+      anti_join(nomWar, by = &#39;playerId&#39;)
+
+batJaws &lt;- indJaws %&gt;%
+      select(-playerId) %&gt;% 
+      filter(POS != &quot;P&quot;)
+
+# 1B and CF are highest with 10 members a piece so they won&#39;t need filler players
+table(batJaws$POS)</code></pre>
+<pre><code>## 
+## 1B 2B 3B  C CF LF RF SS 
+## 10  7  2  4 10  5  5  6</code></pre>
+<p>First base and Center Field have the most players so we’ll add “average” players to the other position pools until the amounts are equal.</p>
+<pre class="r"><code># Number of filler players needed at each position
+neededPOS &lt;- batJaws %&gt;%
+      group_by(POS) %&gt;%
+      summarize(n = n()) %&gt;% 
+      mutate(remPOS = max(n) - n) %&gt;%
+      filter(POS != &quot;1B&quot;, POS != &quot;CF&quot;) %&gt;%
+      select(-n)
+
+# List of lists with filler position amounts
+posLL &lt;- map2(neededPOS$POS, neededPOS$remPOS, function(POS, n) {
+      POS &lt;- rep(POS, n)
+})
+
+# Create tibble with all the filler players for each position
+
+# Empty tibble
+posFillTib &lt;- tibble(
+      Name = character(),
+      POS = character(),
+      WARtenure = numeric(),
+      WAR4 = numeric(),
+      JAWS4 = numeric()
+      
+)
+
+# input: Position; function creates one filler player with avgHOF stats
+fillPOS &lt;- function(POS) {
+      posFillTib &lt;- posFillTib %&gt;%
+            add_row(Name = &quot;avgHOFplayer&quot;,
+                    POS = POS,
+                    WARtenure = median(batJaws$WARtenure),
+                    WAR4 = median(batJaws$WAR4),
+                    JAWS4 = median(batJaws$JAWS4)
+                    
+            )
+}
+# List of lists fed to function; outputs tibble of filler players
+fillerPlayers &lt;- map_dfr(posLL, fillPOS)
+
+# Creating weighted distribution of position players
+wtBatDistr &lt;- batJaws %&gt;%
+      bind_rows(fillerPlayers)
+
+head(wtBatDistr, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 5
+##   Name         POS   WARtenure  WAR4 JAWS4
+##   &lt;chr&gt;        &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 Jake Beckley 1B         23.5  16.5  20.0
+## 2 Gus Bell     CF         13.0  12.4  12.7
+## 3 Johnny Bench C          75.0  30.4  52.7</code></pre>
+<p>We can now calculate the averages using some cool, nested <code>purrr::map</code> action.</p>
+<pre class="r"><code># Calculate weighted averages at each position
+wbd_nested &lt;- wtBatDistr %&gt;% 
+      group_by(POS) %&gt;% 
+      nest()
+
+wt_avg_FUN &lt;- function(df) {
+      mutate(df, `Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+}
+
+wbd_avgs &lt;- wbd_nested %&gt;% 
+      mutate(stats = map(data, wt_avg_FUN)) %&gt;% 
+      select(POS, stats) %&gt;% 
+      unnest() %&gt;% 
+      select(Name, POS, everything()) %&gt;% 
+      filter(Name != &quot;avgHOFplayer&quot;)
+
+head(wbd_avgs, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 8
+##   Name          POS   WARtenure  WAR4 JAWS4 `Wt Avg WAR` `Wt Avg WAR4`
+##   &lt;chr&gt;         &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;
+## 1 Jake Beckley  1B        23.5  16.5  20.0          22.3          15.4
+## 2 Sean Casey    1B        16.6  13.3  14.9          22.3          15.4
+## 3 Gordy Coleman 1B         7.27  7.18  7.23         22.3          15.4
+## # ... with 1 more variable: `Wt Avg JAWS4` &lt;dbl&gt;</code></pre>
+</div>
+<div id="create-dataframes-for-visuals" class="section level2">
+<h2>Create Dataframes for Visuals</h2>
+<div id="datatable" class="section level3">
+<h3>DataTable</h3>
+<p>Our first visual will be a <code>DT</code> datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines. Then pitcher averages are figured, and everything is combined into one dataframe.</p>
+<pre class="r"><code># Get positional player nominees
+nomBatJaws &lt;- warJaws %&gt;% 
+      anti_join(indWar, by = &#39;playerId&#39;) %&gt;% 
+      filter(POS != &quot;P&quot;) %&gt;% 
+      select(-playerId)
+
+# Sync averages to nominee positions and combine with inductee averages dataframe
+wtBatJaws &lt;- nomBatJaws %&gt;% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR`) %&gt;% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR4`) %&gt;% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
+      bind_rows(wbd_avgs)
+
+
+# Pitcher averages
+pitJaws &lt;- warJaws %&gt;% 
+      anti_join(nomWar, by = &#39;playerId&#39;) %&gt;% 
+      select(-playerId) %&gt;% 
+      filter(POS == &quot;P&quot;) %&gt;%
+      mutate(`Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+
+# Get pitcher Nominees
+nomPitJaws &lt;- warJaws %&gt;% 
+      anti_join(indWar, by = &#39;playerId&#39;) %&gt;% 
+      filter(POS == &quot;P&quot;) %&gt;% 
+      select(-playerId)
+
+# Sync (pitcher pool not actually weighted)
+wtPitJaws &lt;- nomPitJaws %&gt;% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR`) %&gt;% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR4`) %&gt;% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
+      bind_rows(pitJaws)
+
+
+display_table &lt;- wtBatJaws %&gt;% 
+      bind_rows(wtPitJaws) %&gt;% 
+      arrange(Name)
+
+head(display_table, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 8
+##   Name         POS   WARtenure  WAR4 JAWS4 `Wt Avg WAR` `Wt Avg WAR4`
+##   &lt;chr&gt;        &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;        &lt;dbl&gt;         &lt;dbl&gt;
+## 1 Aaron Boone  3B         11.6  10.0  10.8         20.4          14.9
+## 2 Adam Dunn    LF         16.4  11.9  14.2         29.0          16.6
+## 3 Barry Larkin SS         70.2  26.2  48.2         23.5          14.2
+## # ... with 1 more variable: `Wt Avg JAWS4` &lt;dbl&gt;</code></pre>
+</div>
+<div id="cleveland-dot-charts" class="section level3">
+<h3>Cleveland Dot Charts</h3>
+<p>When comparing position players, position to position isn’t the only comparison that can be made. In some situations, it’s more fair to look at wider, positional group statistics. There are five groups that we’ll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Charts.</p>
+<pre class="r"><code># Build df with group positions
+cornerIF &lt;- warJaws %&gt;% 
+      filter(POS == &quot;1B&quot; | POS == &quot;3B&quot;) %&gt;%
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;3B&quot;), to = c(&quot;CI&quot;, &quot;CI&quot;)))
+
+middleIF &lt;- warJaws %&gt;% 
+      filter(POS == &quot;2B&quot; | POS == &quot;SS&quot;) %&gt;%
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;), to = c(&quot;MI&quot;, &quot;MI&quot;)))
+
+outField &lt;- warJaws %&gt;% 
+      filter(POS == &quot;LF&quot; | POS == &quot;CF&quot; | POS == &quot;RF&quot;) %&gt;%
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;LF&quot;, &quot;CF&quot;, &quot;RF&quot;), to = c(&quot;OF&quot;, &quot;OF&quot;, &quot;OF&quot;)))
+
+corners &lt;- warJaws %&gt;% 
+      filter(POS == &quot;1B&quot; | POS == &quot;3B&quot; | POS == &quot;LF&quot; | POS == &quot;RF&quot;) %&gt;% 
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;LF&quot;, &quot;RF&quot;, &quot;3B&quot;), to = c(&quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;)))
+
+middle &lt;- warJaws %&gt;% 
+      filter(POS == &quot;2B&quot; | POS == &quot;SS&quot; | POS == &quot;C&quot; | POS == &quot;CF&quot;) %&gt;% 
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;, &quot;C&quot;, &quot;CF&quot;), to = c(&quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;)))
+
+other_groups &lt;- cornerIF %&gt;% 
+      bind_rows(middleIF, outField, corners, middle)
+
+
+# Calculate averages of each group
+
+other_groups_i &lt;- other_groups %&gt;% 
+      anti_join(nomWar, by = &#39;playerId&#39;)
+
+og_nested &lt;- other_groups_i %&gt;% 
+      group_by(POS) %&gt;% 
+      nest()
+
+avg_FUN &lt;- function(df) {
+      mutate(df, WAR_avg = round(mean(WARtenure), 1), WAR4_avg = round(mean(WAR4), 1), JAWS_avg = round(mean(JAWS4), 1))
+}
+
+group_avgs_i &lt;- og_nested %&gt;% 
+      mutate(stats = map(data, avg_FUN)) %&gt;% 
+      select(POS, stats) %&gt;% 
+      unnest() %&gt;% 
+      select(playerId, Name, POS, everything())
+
+# Add Nominees
+
+other_groups_n &lt;- other_groups %&gt;% 
+      anti_join(indWar, by = &#39;playerId&#39;)
+
+group_avgs &lt;- other_groups_n %&gt;% 
+      mutate(WAR_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR_avg) %&gt;% as.numeric(), WAR4_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR4_avg) %&gt;% as.numeric(), JAWS_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$JAWS_avg) %&gt;% as.numeric()) %&gt;% 
+      bind_rows(group_avgs_i)
+
+# Prepare dataframe for JAWS dot chart
+dot_table &lt;- display_table %&gt;% 
+      rename(JAWS_avg = `Wt Avg JAWS4`, WAR_avg = `Wt Avg WAR`) %&gt;% 
+      bind_rows(group_avgs)
+
+jaws_group &lt;- dot_table %&gt;% 
+      select(Name, POS, JAWS4, JAWS_avg) %&gt;% 
+      rename(Group = POS, `Avg HOF` = JAWS_avg) %&gt;% 
+      gather(key = &quot;Stat&quot;, value = &quot;Value&quot;, -c(Name, Group))
+
+# Prepare dataframe for WAR dot chart
+war_group &lt;- dot_table %&gt;% 
+      select(Name, POS, WARtenure, WAR_avg) %&gt;% 
+      rename(Group = POS, `Avg HOF` = WAR_avg, WAR = WARtenure) %&gt;% 
+      gather(key = &quot;Stat&quot;, value = &quot;Value&quot;, -c(Name, Group))
+
+glimpse(war_group)</code></pre>
+<pre><code>## Observations: 368
 ## Variables: 4
-## $ playerId  &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;...
-## $ WARtenure &lt;dbl&gt; 23.48, 13.03, 74.99, 0.39, 25.53, 11.61, 6.68, 12.28...
-## $ WAR4      &lt;dbl&gt; 16.47, 12.42, 30.41, 2.74, 23.56, 10.03, 6.57, 9.95,...
-## $ JAWS4     &lt;dbl&gt; 19.98, 12.73, 52.70, 1.56, 24.55, 10.82, 6.62, 11.11...</code></pre>
+## $ Name  &lt;chr&gt; &quot;Aaron Boone&quot;, &quot;Adam Dunn&quot;, &quot;Barry Larkin&quot;, &quot;Bid McPhee&quot;...
+## $ Group &lt;chr&gt; &quot;3B&quot;, &quot;LF&quot;, &quot;SS&quot;, &quot;2B&quot;, &quot;SS&quot;, &quot;P&quot;, &quot;P&quot;, &quot;P&quot;, &quot;C&quot;, &quot;P&quot;, &quot;...
+## $ Stat  &lt;chr&gt; &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, &quot;WAR&quot;, ...
+## $ Value &lt;dbl&gt; 11.61, 16.44, 70.17, 52.39, 13.55, 29.07, 22.26, 7.43, 1...</code></pre>
+</div>
+<div id="interactive-line-chart" class="section level3">
+<h3>Interactive Line Chart</h3>
+<p>In the final visual, we’ll show player WAR values for each season played with the Reds, plus, add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.</p>
+<pre class="r"><code># WAR4 + years; add type column
+war4Dat &lt;- warDat %&gt;%
+      group_by(playerId) %&gt;%
+      top_n(4, rWAR) %&gt;% 
+      ungroup() %&gt;% 
+      select(-teamId) %&gt;% 
+      add_column(type = rep(&quot;WAR4&quot;, 328))
+
+# Not WAR4 + years; add type column
+notWar4 &lt;- warDat %&gt;% 
+      anti_join(war4Dat, by = c(&quot;playerId&quot;, &quot;yearId&quot;)) %&gt;% 
+      select(-teamId) %&gt;% 
+      add_column(type = rep(&quot;WAR&quot;, 427))
+
+war_combined &lt;- notWar4 %&gt;% 
+      bind_rows(war4Dat)
+
+
+#  Positional and Pitcher seasonal average WAR values
+
+pitMedWar &lt;- war_combined %&gt;% 
+      filter(POS == &quot;P&quot;) %&gt;% 
+      summarize(`Median Pitcher WAR` = median(rWAR))
+
+posMedWAR &lt;- war_combined %&gt;% 
+      filter(POS != &quot;P&quot;) %&gt;% 
+      summarize(`Median Position WAR` = median(rWAR))
+
+war_combo_avg &lt;- war_combined %&gt;% 
+      mutate(`Median WAR` = if_else(POS == &quot;P&quot;, pitMedWar$`Median Pitcher WAR`[[1]], posMedWAR$`Median Position WAR`[[1]])) %&gt;% 
+      rename(bbref_id = playerId, WAR = rWAR) %&gt;% 
+      select(bbref_id, Name, everything())</code></pre>
+</div>
+</div>
+<div id="save-objects" class="section level2">
+<h2>Save Objects</h2>
+<p>Only four objects will be required for the final post in this series: <code>display_table</code>, <code>jaws_group</code>, <code>war_group</code>, and <code>war_combo_avg</code>.</p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>In this post, we calculated the JAWS statistic and positional averages that we’ll use to compare nominees and typical members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for part three.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>
+<a id='bib-Boettiger_2017'></a><a href="#cite-Boettiger_2017">[1]</a><cite> C. Boettiger. <em>knitcitations: Citations for ‘Knitr’ Markdown Files</em>. R package version 1.0.8. 2017. URL: <a href="https://CRAN.R-project.org/package=knitcitations">https://CRAN.R-project.org/package=knitcitations</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2011'></a><a href="#cite-Wickham_2011">[2]</a><cite> H. Wickham. “The Split-Apply-Combine Strategy for Data Analysis”. In: <em>Journal of Statistical Software</em> 40.1 (2011), pp. 1–29. URL: <a href="http://www.jstatsoft.org/v40/i01/">http://www.jstatsoft.org/v40/i01/</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2017'></a><a href="#cite-Wickham_2017">[3]</a><cite> H. Wickham. <em>tidyverse: Easily Install and Load the ‘Tidyverse’</em>. R package version 1.2.1. 2017. URL: <a href="https://CRAN.R-project.org/package=tidyverse">https://CRAN.R-project.org/package=tidyverse</a>.</cite>
+</p>
 </div>
