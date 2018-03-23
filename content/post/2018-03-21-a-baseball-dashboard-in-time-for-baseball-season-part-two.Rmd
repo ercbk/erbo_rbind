@@ -1,0 +1,201 @@
+---
+title: A Baseball Dashboard in Time for Opening Day (part two)
+author: Eric Book
+date: '2018-03-21'
+slug: a-baseball-dashboard-in-time-for-opening-day-part-two
+categories:
+  - sports-analysis
+  - dashboards
+  - dataviz
+tags:
+  - ggiraph
+  - shiny
+  - dt
+draft: yes
+output:
+  blogdown::html_page:
+    toc: yes
+    toc_depth: 2
+---
+
+
+
+```{r hid-cit, include=FALSE}
+library(knitcitations)
+cleanbib()
+cite_options(hyperlink = 'to.doc', citation_format = 'text', style = 'html')
+citet(c(citation('tidyverse'), citation('ggiraph')))
+```
+
+
+```{r hid-part1, cache=TRUE, include=FALSE}
+
+library(tidyverse)
+library(rvest)
+library(openWARData)
+library(Lahman)
+
+url <- "https://en.wikipedia.org/wiki/Cincinnati_Reds_Hall_of_Fame_and_Museum#Cincinnati_Reds_Hall_of_Fame_members"
+members <- url %>%
+      read_html() %>%
+      html_nodes(xpath='//*[@id="mw-content-text"]/div/table[2]') %>%
+      html_table()
+members <- members[[1]]
+
+members <- members %>% 
+      filter(Inductee != "Adam Dunn" & Inductee != "Fred Norman" & Inductee != "Dave Bristol")
+
+idTTa <- idTT %>%
+      select(key_bbref, name_last, name_first) %>%
+      mutate(name_whole = paste(name_first, name_last))
+
+indID <- map_dfr(members[,"Inductee"], function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")})
+
+missNamList <- list("Dolf Luque", "Leo Cardenas", "Tony Perez", "Dave Concepcion", "Ken Griffey",
+                    "Jose Rijo", "Cesar Geronimo", "Pedro Borbon")
+indID <- map_dfr(missNamList, function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")}) %>% 
+      bind_rows(indID) %>% 
+      mutate(name_whole = if_else(key_bbref == "griffke02", "Ken Griffey Jr", name_whole))
+
+indID <- filter(indID, key_bbref != "rosepe02" & key_bbref != "morgajo01"
+                    & key_bbref != "mccormi03" & key_bbref != "andersp01" 
+                    & key_bbref != "wrighge03" & key_bbref != "hutchfr01"
+                    & key_bbref != "borbope02"    
+                )
+
+nomNamList <- list("Aaron Boone", "Adam Dunn", "John Franco", "Danny Graves", "Scott Rolen",
+                   "Reggie Sanders")
+nomID <- map_dfr(nomNamList, function(x) {
+      filter(idTTa, name_whole == x & key_bbref != "")})
+
+nomID <- filter(nomID, key_bbref != "sandere01")
+
+indWar <- map_dfr(as.character(indID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %>%
+      select(playerId, yearId, teamId, rWAR) %>%
+      mutate_if(is.factor, as.character) %>% 
+      filter(teamId == "CIN")
+
+indWar <- indID %>% 
+      select(name_whole, key_bbref) %>% 
+      rename(Name = name_whole, playerId = key_bbref) %>% 
+      inner_join(indWar, by = 'playerId')
+
+nomWar <- map_dfr(as.character(nomID$key_bbref), function(x) {
+      filter(rWAR, playerId == x)}) %>%
+      select(playerId, yearId, teamId, rWAR) %>%
+      mutate_if(is.factor, as.character) %>% 
+      filter(teamId == "CIN")
+
+nomWar <- nomID %>% 
+      select(name_whole, key_bbref) %>% 
+      rename(Name = name_whole, playerId = key_bbref) %>% 
+      inner_join(nomWar, by = 'playerId')
+
+indWar <- filter(indWar, playerId != "grangwa01" & playerId != "mckecbi01"
+                     & playerId != "werbebi01" & playerId != "wrighge01"
+                     & playerId != "wrighha01")
+
+warDat <- indWar %>% 
+      bind_rows(nomWar)
+
+posDat <- map2_dfr(warDat$playerId, warDat$yearId, function(x,y) {
+      filter(Fielding, playerID == x & yearID == y)}) %>% 
+      filter(teamID == "CIN" | teamID == "CN1" | teamID == "CN2")
+
+posDat <- posDat %>%
+      select(playerID, POS, G) %>% 
+      group_by(playerID, POS) %>% 
+      summarize(sumG = sum(G)) %>% 
+      filter(sumG == max(sumG)) %>% 
+      ungroup() %>% 
+      select(playerID, POS)
+
+posDat <- posDat %>% 
+      add_row(playerID = "o'tooji01", POS = "P") %>% 
+      rename(playerId = playerID)
+
+ofDat <- posDat %>% 
+      filter(POS == "OF")
+
+ofYears <- map_dfr(ofDat$playerId, function(x) {
+      filter(warDat, playerId == x)
+})
+      
+ofSplit <- map2_dfr(ofYears$playerId, ofYears$yearId, function(x,y) {
+      filter(Appearances, playerID == x & yearID == y)}) %>% 
+      rename(LF = G_lf, CF = G_cf, RF = G_rf) %>% 
+      gather('LF', 'CF', 'RF', key = "POS", value = "G")
+
+splitSum <- ofSplit %>% 
+      select(playerID, POS, G) %>%
+      rename(playerId = playerID) %>%
+      group_by(playerId, POS) %>% 
+      summarize(sumG = sum(G)) %>% 
+      filter(sumG == max(sumG)) %>% 
+      ungroup() %>% 
+      select(playerId, POS)
+
+ofPos <- posDat %>% 
+      filter(POS == "OF") %>% 
+      select(-POS) %>% 
+      inner_join(splitSum, by = "playerId")
+
+posDat <- posDat %>% 
+      filter(POS != "OF") %>%
+      bind_rows(ofPos)
+
+warDat <- warDat %>% 
+      inner_join(posDat, by = 'playerId')
+
+```
+
+
+``` {r, echo=FALSE}
+blogdown::shortcode("tweet", "900017684590579713")
+```
+
+
+```{r echo=FALSE}
+blogdown::shortcode("tweet", "900033162771910656")
+```
+
+
+In [part one](), we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we'll perform the calculations and visualize our findings in a `shinydashboard`.
+
+
+
+## JAWS Calculation
+
+
+Words
+
+
+```{r jaws, message=FALSE}
+
+library(tidyverse)
+
+# total WAR during Reds tenure
+warSum <- warDat %>%
+      group_by(playerId) %>%
+      summarize(WARtenure = sum(rWAR)) %>% 
+      ungroup()
+
+# Sum of top 4 WAR years
+war4Dat <- warDat %>%
+      group_by(playerId) %>%
+      top_n(4, rWAR) %>%
+      tally(rWAR) %>%
+      rename(WAR4 = n)
+
+# Calculating JAWS
+warJaws <- warSum %>% 
+      inner_join(war4Dat, by = 'playerId') %>% 
+      mutate(JAWS4 = round((WARtenure + WAR4)/2, 2)) %>% 
+      select(playerId, WARtenure, WAR4, JAWS4)
+
+glimpse(warJaws)
+
+```

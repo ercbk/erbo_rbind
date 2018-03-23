@@ -1,0 +1,62 @@
+---
+title: A Baseball Dashboard in Time for Baseball Season (part two)
+author: Eric Book
+date: '2018-03-21'
+slug: a-baseball-dashboard-in-time-for-baseball-season-part-two
+categories:
+  - sports-analysis
+  - dashboards
+  - dataviz
+tags:
+  - ggiraph
+  - shiny
+  - dt
+draft: yes
+output:
+  blogdown::html_page:
+    toc: yes
+    toc_depth: 2
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#jaws-calculation">JAWS Calculation</a></li>
+</ul>
+</div>
+
+{{% tweet "900017684590579713" %}}
+{{% tweet "900033162771910656" %}}
+<p>In <a href="">part one</a>, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the calculations and visualize our findings in a <code>shinydashboard</code>.</p>
+<div id="jaws-calculation" class="section level2">
+<h2>JAWS Calculation</h2>
+<p>Words</p>
+<pre class="r"><code>library(tidyverse)
+
+# total WAR during Reds tenure
+warSum &lt;- warDat %&gt;%
+      group_by(playerId) %&gt;%
+      summarize(WARtenure = sum(rWAR)) %&gt;% 
+      ungroup()
+
+# Sum of top 4 WAR years
+war4Dat &lt;- warDat %&gt;%
+      group_by(playerId) %&gt;%
+      top_n(4, rWAR) %&gt;%
+      tally(rWAR) %&gt;%
+      rename(WAR4 = n)
+
+# Calculating JAWS
+warJaws &lt;- warSum %&gt;% 
+      inner_join(war4Dat, by = &#39;playerId&#39;) %&gt;% 
+      mutate(JAWS4 = round((WARtenure + WAR4)/2, 2)) %&gt;% 
+      select(playerId, WARtenure, WAR4, JAWS4)
+
+glimpse(warJaws)</code></pre>
+<pre><code>## Observations: 82
+## Variables: 4
+## $ playerId  &lt;chr&gt; &quot;becklja01&quot;, &quot;bellgu01&quot;, &quot;benchjo01&quot;, &quot;billija01&quot;, &quot;...
+## $ WARtenure &lt;dbl&gt; 23.48, 13.03, 74.99, 0.39, 25.53, 11.61, 6.68, 12.28...
+## $ WAR4      &lt;dbl&gt; 16.47, 12.42, 30.41, 2.74, 23.56, 10.03, 6.57, 9.95,...
+## $ JAWS4     &lt;dbl&gt; 19.98, 12.73, 52.70, 1.56, 24.55, 10.82, 6.62, 11.11...</code></pre>
+</div>
