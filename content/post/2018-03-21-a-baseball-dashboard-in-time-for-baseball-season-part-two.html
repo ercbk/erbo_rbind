@@ -5,12 +5,6 @@ date: '2018-03-21'
 slug: a-baseball-dashboard-in-time-for-opening-day-part-two
 categories:
   - sports-analysis
-  - dashboards
-  - dataviz
-tags:
-  - ggiraph
-  - shiny
-  - dt
 draft: no
 output:
   blogdown::html_page:
@@ -32,7 +26,7 @@ output:
 
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
-<p>In <a href="">part one</a>, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined a tenure qualification of four seasons, and primary player positions were determined by the greatest number of games played at a position. In part two, we’ll perform the JAWS calculations and create dataframes that will be needed for the <code>shinydashboard</code>. Recall that for these calculations, you’ll need <code>indWar</code>, <code>nomWar</code>, <code>posDat</code>, and <code>warDat</code> from part one.</p>
+<p>In <a href="https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/">part one</a>, we got the player WAR values, primary positions, and determined the tenure qualification. In part two, we’ll perform the JAWS calculations and create dataframes that will be needed for our dashboard. Recall that for these calculations, you’ll need <code>indWar</code>, <code>nomWar</code>, <code>posDat</code>, and <code>warDat</code> from part one.</p>
 <div id="jaws-calculation" class="section level2">
 <h2>JAWS Calculation</h2>
 <p>To compute the JAWS values, we’ll take the average of the sum of the top four WAR values and the sum of the WAR accrued while playing for the Reds</p>
@@ -78,7 +72,7 @@ head(warJaws, 3)</code></pre>
 </div>
 <div id="weighting-positions-and-averages" class="section level2">
 <h2>Weighting Positions and Averages</h2>
-<p>The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we’ll add “average” players to each position pool to reduce the bias. Pitchers aren’t compared to positional players statistically so there will be two sets of average calculations that we’ll be doing later. They also aren’t subdivided into Starting and Relief so there will be no need to add players to their pool.</p>
+<p>The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we’ll add “average” players to each position pool to reduce the bias. Pitchers aren’t compared to positional players statistically so there will be two sets of average calculations. They also aren’t subdivided into Starting and Relief so there will be no need to add players to their pool.</p>
 <pre class="r"><code># Only want inductees in our average calculation
 indJaws &lt;- warJaws %&gt;% 
       anti_join(nomWar, by = &#39;playerId&#39;)
@@ -150,7 +144,9 @@ wbd_nested &lt;- wtBatDistr %&gt;%
       nest()
 
 wt_avg_FUN &lt;- function(df) {
-      mutate(df, `Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+      mutate(df, `Wt Avg WAR` = round(mean(WARtenure), 1),
+             `Wt Avg WAR4` = round(mean(WAR4), 1),
+             `Wt Avg JAWS4` = round(mean(JAWS4), 1))
 }
 
 wbd_avgs &lt;- wbd_nested %&gt;% 
@@ -182,7 +178,12 @@ nomBatJaws &lt;- warJaws %&gt;%
 
 # Sync averages to nominee positions and combine with inductee averages dataframe
 wtBatJaws &lt;- nomBatJaws %&gt;% 
-      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR`) %&gt;% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg WAR4`) %&gt;% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = wbd_avgs$POS, to = wbd_avgs$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = wbd_avgs$POS,
+                                            to = wbd_avgs$`Wt Avg WAR`) %&gt;% as.numeric(),
+             `Wt Avg WAR4` = plyr::mapvalues(POS, from = wbd_avgs$POS,
+                                             to = wbd_avgs$`Wt Avg WAR4`) %&gt;% as.numeric(),
+             `Wt Avg JAWS4` = plyr::mapvalues(POS, from = wbd_avgs$POS,
+                                              to = wbd_avgs$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
       bind_rows(wbd_avgs)
 
 
@@ -191,7 +192,9 @@ pitJaws &lt;- warJaws %&gt;%
       anti_join(nomWar, by = &#39;playerId&#39;) %&gt;% 
       select(-playerId) %&gt;% 
       filter(POS == &quot;P&quot;) %&gt;%
-      mutate(`Wt Avg WAR` = round(mean(WARtenure), 1), `Wt Avg WAR4` = round(mean(WAR4), 1), `Wt Avg JAWS4` = round(mean(JAWS4), 1))
+      mutate(`Wt Avg WAR` = round(mean(WARtenure), 1),
+             `Wt Avg WAR4` = round(mean(WAR4), 1),
+             `Wt Avg JAWS4` = round(mean(JAWS4), 1))
 
 # Get pitcher Nominees
 nomPitJaws &lt;- warJaws %&gt;% 
@@ -201,7 +204,11 @@ nomPitJaws &lt;- warJaws %&gt;%
 
 # Sync (pitcher pool not actually weighted)
 wtPitJaws &lt;- nomPitJaws %&gt;% 
-      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR`) %&gt;% as.numeric(), `Wt Avg WAR4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg WAR4`) %&gt;% as.numeric(), `Wt Avg JAWS4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
+      mutate(`Wt Avg WAR` = plyr::mapvalues(POS, from = pitJaws$POS,
+                                            to = pitJaws$`Wt Avg WAR`) %&gt;% as.numeric(),
+             `Wt Avg WAR4` = plyr::mapvalues(POS, from = pitJaws$POS,
+                                             to = pitJaws$`Wt Avg WAR4`) %&gt;% as.numeric(),
+             `Wt Avg JAWS4` = plyr::mapvalues(POS, from = pitJaws$POS, to = pitJaws$`Wt Avg JAWS4`) %&gt;% as.numeric()) %&gt;% 
       bind_rows(pitJaws)
 
 
@@ -224,23 +231,28 @@ head(display_table, 3)</code></pre>
 <pre class="r"><code># Build df with group positions
 cornerIF &lt;- warJaws %&gt;% 
       filter(POS == &quot;1B&quot; | POS == &quot;3B&quot;) %&gt;%
-      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;3B&quot;), to = c(&quot;CI&quot;, &quot;CI&quot;)))
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;3B&quot;),
+                                   to = c(&quot;CI&quot;, &quot;CI&quot;)))
 
 middleIF &lt;- warJaws %&gt;% 
       filter(POS == &quot;2B&quot; | POS == &quot;SS&quot;) %&gt;%
-      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;), to = c(&quot;MI&quot;, &quot;MI&quot;)))
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;),
+                                   to = c(&quot;MI&quot;, &quot;MI&quot;)))
 
 outField &lt;- warJaws %&gt;% 
       filter(POS == &quot;LF&quot; | POS == &quot;CF&quot; | POS == &quot;RF&quot;) %&gt;%
-      mutate(POS = plyr::mapvalues(POS, from = c(&quot;LF&quot;, &quot;CF&quot;, &quot;RF&quot;), to = c(&quot;OF&quot;, &quot;OF&quot;, &quot;OF&quot;)))
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;LF&quot;, &quot;CF&quot;, &quot;RF&quot;),
+                                   to = c(&quot;OF&quot;, &quot;OF&quot;, &quot;OF&quot;)))
 
 corners &lt;- warJaws %&gt;% 
       filter(POS == &quot;1B&quot; | POS == &quot;3B&quot; | POS == &quot;LF&quot; | POS == &quot;RF&quot;) %&gt;% 
-      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;LF&quot;, &quot;RF&quot;, &quot;3B&quot;), to = c(&quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;)))
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;1B&quot;, &quot;LF&quot;, &quot;RF&quot;, &quot;3B&quot;),
+                                   to = c(&quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;, &quot;CO&quot;)))
 
 middle &lt;- warJaws %&gt;% 
       filter(POS == &quot;2B&quot; | POS == &quot;SS&quot; | POS == &quot;C&quot; | POS == &quot;CF&quot;) %&gt;% 
-      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;, &quot;C&quot;, &quot;CF&quot;), to = c(&quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;)))
+      mutate(POS = plyr::mapvalues(POS, from = c(&quot;2B&quot;, &quot;SS&quot;, &quot;C&quot;, &quot;CF&quot;),
+                                   to = c(&quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;, &quot;Md&quot;)))
 
 other_groups &lt;- cornerIF %&gt;% 
       bind_rows(middleIF, outField, corners, middle)
@@ -256,7 +268,9 @@ og_nested &lt;- other_groups_i %&gt;%
       nest()
 
 avg_FUN &lt;- function(df) {
-      mutate(df, WAR_avg = round(mean(WARtenure), 1), WAR4_avg = round(mean(WAR4), 1), JAWS_avg = round(mean(JAWS4), 1))
+      mutate(df, WAR_avg = round(mean(WARtenure), 1),
+             WAR4_avg = round(mean(WAR4), 1),
+             JAWS_avg = round(mean(JAWS4), 1))
 }
 
 group_avgs_i &lt;- og_nested %&gt;% 
@@ -271,7 +285,12 @@ other_groups_n &lt;- other_groups %&gt;%
       anti_join(indWar, by = &#39;playerId&#39;)
 
 group_avgs &lt;- other_groups_n %&gt;% 
-      mutate(WAR_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR_avg) %&gt;% as.numeric(), WAR4_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$WAR4_avg) %&gt;% as.numeric(), JAWS_avg = plyr::mapvalues(POS, from = group_avgs_i$POS, to = group_avgs_i$JAWS_avg) %&gt;% as.numeric()) %&gt;% 
+      mutate(WAR_avg = plyr::mapvalues(POS, from = group_avgs_i$POS,
+                                       to = group_avgs_i$WAR_avg) %&gt;% as.numeric(),
+             WAR4_avg = plyr::mapvalues(POS, from = group_avgs_i$POS,
+                                        to = group_avgs_i$WAR4_avg) %&gt;% as.numeric(),
+             JAWS_avg = plyr::mapvalues(POS, from = group_avgs_i$POS,
+                                        to = group_avgs_i$JAWS_avg) %&gt;% as.numeric()) %&gt;% 
       bind_rows(group_avgs_i)
 
 # Prepare dataframe for JAWS dot chart
@@ -300,7 +319,7 @@ glimpse(war_group)</code></pre>
 </div>
 <div id="interactive-line-chart" class="section level3">
 <h3>Interactive Line Chart</h3>
-<p>In the final visual, we’ll show player WAR values for each season played with the Reds, plus, add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.</p>
+<p>The final visual will be a line graph of player WAR values for each season played with the Reds. We’ll add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.</p>
 <pre class="r"><code># WAR4 + years; add type column
 war4Dat &lt;- warDat %&gt;%
       group_by(playerId) %&gt;%
@@ -330,7 +349,9 @@ posMedWAR &lt;- war_combined %&gt;%
       summarize(`Median Position WAR` = median(rWAR))
 
 war_combo_avg &lt;- war_combined %&gt;% 
-      mutate(`Median WAR` = if_else(POS == &quot;P&quot;, pitMedWar$`Median Pitcher WAR`[[1]], posMedWAR$`Median Position WAR`[[1]])) %&gt;% 
+      mutate(`Median WAR` = if_else(POS == &quot;P&quot;,
+                                    pitMedWar$`Median Pitcher WAR`[[1]],
+                                    posMedWAR$`Median Position WAR`[[1]])) %&gt;% 
       rename(bbref_id = playerId, WAR = rWAR) %&gt;% 
       select(bbref_id, Name, everything())</code></pre>
 </div>
@@ -341,7 +362,7 @@ war_combo_avg &lt;- war_combined %&gt;%
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>In this post, we calculated the JAWS statistic and positional averages that we’ll use to compare nominees and typical members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for part three.</p>
+<p>In this post, we calculated the JAWS statistic and positional averages that can be used to evaluate nominees and compare members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for <a href="https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three/">part three</a>.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>

@@ -108,7 +108,7 @@ glimpse(indID)</code></pre>
 ## $ name_last  &lt;fct&gt; Luque, Cardenas, Perez, Concepcion, Griffey, Griffe...
 ## $ name_first &lt;fct&gt; Dolf, Leo, Tony, Dave, Ken, Ken, Jose, Cesar, Pedro...
 ## $ name_whole &lt;chr&gt; &quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave C...</code></pre>
-<p>Now for the nominees,</p>
+<p>Now for the nominees…</p>
 <pre class="r"><code>nomNamList &lt;- list(&quot;Aaron Boone&quot;, &quot;Adam Dunn&quot;, &quot;John Franco&quot;, &quot;Danny Graves&quot;, &quot;Scott Rolen&quot;,
                    &quot;Reggie Sanders&quot;)
 nomID &lt;- map_dfr(nomNamList, function(x) {
@@ -221,7 +221,7 @@ Cutoff
 </tr>
 </tbody>
 </table>
-<p>Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn’t part of this class, I’d consider five years but wouldn’t go above five.</p>
+<p>Looking at the nominees, it turns out Scott Rolen only played four seasons for the Reds. The goal of this project is to evaluate nominees, so four years would be the necessary cutoff in order for Rolen to be included. If Rolen wasn’t part of this class, I’d consider five years but not above five.</p>
 <p>So the inductees that didn’t make the cut were the following: Billy Werber, Bill McKechnie, and Wayne Granger. The Wright boys, George and Harry, also aren’t in there. They played with the Reds prior to 1871 and their WAR wasn’t available. Our final inductee pool has 76 players.</p>
 <pre class="r"><code>indWar &lt;- filter(indWar, playerId != &quot;grangwa01&quot; &amp; playerId != &quot;mckecbi01&quot;
                      &amp; playerId != &quot;werbebi01&quot; &amp; playerId != &quot;wrighge01&quot;
@@ -328,7 +328,7 @@ warDat &lt;- warDat %&gt;%
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we’ll perform the calculations in part two and visualize them in a <code>shinydashboard</code> in part three.</p>
+<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we’ll perform the calculations in <a href="https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/">part two</a> and visualize them in a <code>shinydashboard</code> in <a href="https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three/">part three</a>.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
