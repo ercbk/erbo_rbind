@@ -432,7 +432,7 @@ blogdown::shortcode("tweet", "900033162771910656")
 ```
 
 
-In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we collected the data. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/), we manipulated the data. Now, we get to see the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`. If you want to match the colors of the visuals to the desired team, there's [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](www.codeofcolors.com).
+In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we collected the data. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/), we manipulated the data. Now, we get to see the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`. If you want to match the colors of the visuals to a particular team, there's [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](https://www.codeofcolors.com).
 
 
 ## DataTable
@@ -443,13 +443,15 @@ Words
 
 library(DT)
 
-datatable(data = display_table,
+dt <- datatable(data = display_table,
           rownames = FALSE,
           extensions = c("FixedColumns","Buttons"),
           options = list(language = list(sSearch = "Filter:"),
                          search = list(regex = TRUE),
                          buttons = c("colvis", "csv", "pdf"),
                          scrollX = TRUE,
+                         pageLength = 3,
+                         lengthChange = FALSE,
                          fixedColumns = list(leftColumns = 1),
                          dom = "Bfrtlip",
                          initComplete = JS(
@@ -462,3 +464,11 @@ datatable(data = display_table,
 ```
 
 
+```{r iframe-dt, message=FALSE, echo=FALSE}
+
+library(widgetframe)
+
+frameWidget(dt, height = 450)
+```
+
+Words  Words  Words
