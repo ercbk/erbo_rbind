@@ -439,11 +439,11 @@ In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time
 
 [RStudio](https://rstudio.github.io/DT/options.html) and [DataTable](https://datatables.net/reference/option/) have excellent documentation on the various features, so I won't explain every option I've enabled here. I will bring to your attention to a few things though. 
 
-If you decide to include `CSV` and `PDF` buttons, I recommend you also include the "Show <number> entries" feature. It's activated by default but I've turned it off here with `lengthChange = FALSE`. When a user downloads data using either of these buttons, only the data that is displayed is downloaded, so allowing the user to be able to choose how many rows are displayed is a good option. The problem is the default position ("lfrtip") is in the header which now is crowded with buttons and the search window. The [`dom`](https://datatables.net/reference/option/dom) option allows you to configure the location of control elements by specifying the element order. "l" represents the "entries" feature.  This order places it in the bottom left corner of the table. In my opinion this to be the most display-friendly location.
+If you decide to include `CSV` and `PDF` buttons, I recommend you also include the "Show <number> entries" feature. It's activated by default but I've turned it off here with `lengthChange = FALSE`. When a user downloads data using either of these buttons, only the data that is displayed is downloaded, so allowing the user to be able to choose how many rows are displayed is a good option. The problem is the default position ("lfrtip") is in the header which now is crowded with buttons and the search window. The [`dom`](https://datatables.net/reference/option/dom) option allows you to configure the location of control elements by specifying the element order. "l" represents the "entries" feature.  This order places it in the bottom left corner of the table. In my opinion this is the most display-friendly location.
 
 I also consider the horizontal scrolling option a necessity. There's an extension `Responsive` that's supposed to make your table mobile-friendly but I've found it to be buggy. It sometimes creates edge effects that make your columns unreadable. The stable option is to enable horizontal scrolling by setting `scrollX = TRUE` (capital X).
 
-You'll also notice the javascript at the bottom. This allows you to change the background and text color of the header. If you want to match the colors of the visuals to a particular team, [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](https://www.codeofcolors.com) provide color codes to all MLB teams and other sports teams as well.
+You'll also notice the javascript at the bottom. This allows you to change the background and text color of the header. If you want to match the colors of the visuals to a particular team, [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](https://www.codeofcolors.com) provides color codes to all MLB teams and other sports teams as well.
 
 
 ```{r dt, message=FALSE}
@@ -534,7 +534,7 @@ ggplot(war_dot, aes(x = Value, y = Group)) +
 ## Interactive Line Chart
 
 
-The line chart shows the player's WAR for every season he was a Red. Hovering over each point displays its value. The horizontal dashed line is one of two vales: the median WAR per season of pitchers or the median WAR per season of position players. There were no real issues of note in this implementation.
+The line chart shows the player's WAR for every season he was a Red. Hovering over each point displays its value. The horizontal dashed line is one of two values: the median WAR per season of pitchers or the median WAR per season of position players.
 
 ```{r line}
 
@@ -610,7 +610,7 @@ dashBody <- dashboardBody(
 
 ```
 
-Placing this HTML at the beginning of `dashboardBody` will allow your to choose the colors of various elements of the header.
+Placing this HTML at the beginning of `dashboardBody` will allow you to choose the colors of various elements of the header.
 
 ```{r dash-error, eval=FALSE}
 
@@ -622,9 +622,11 @@ Placing this HTML at the beginning of `dashboardBody` will allow your to choose 
 
 ```
 
-Normally, while the dashboard is waiting for user input, an error will displayed in place of the charts. Placing this code at the beginning of `dashboardBody` will hide this error. The code should be on the same level as `tags$head(` above.
+Normally, while the dashboard is waiting for user input, an error will be displayed in place of the charts. Placing this code at the beginning of `dashboardBody` will hide this error. The code should be on the same level as `tags$head(` above.
 
 Without further ado, here's the final product...
+
+Due to the side menu of my website, the dashboard will probably appear stacked. Here's a [link](https://erbo.shinyapps.io/jaws4-post/) to the dashboard that should display full-screen.
 
 
 
@@ -645,9 +647,9 @@ Without further ado, here's the final product...
 
 ## Conclusion
 
-This dashboard is actually only one item in a more tricked-out version that I finished a few weeks ago. If you'd like to take this even further, you can see my other dashboard [here](https://erbo.shinyapps.io/jaws4/) and the code is on my github. The processing scripts are a little rough, so be prepared. It was a learning experience `r emo::ji("blush")`. Hopefully, I'll get around to making them more presentable this fall.
+This dashboard is actually only one item in a more tricked-out version that I finished a few weeks ago. If you'd like to take this even further, you can see my other dashboard [here](https://erbo.shinyapps.io/jaws4/) and the code is on my [github](https://github.com/nllspc/Sports-Analysis/tree/master/RedsJAWS/). The processing scripts are a little rough, so be prepared. It was a learning experience `r emo::ji("blush")`. Hopefully, I'll get around to making them more presentable this fall.
 
-This project combined two loves mine: baseball and  r -- which I really enjoyed. There wasn't any complex modeling but it really challenged me in ways I didn't think it would. The visual design decisions were more difficult than I anticipated. It also allowed me to level-up in `purrr` and `tidyeval`. Hope you enjoyed it. 
+This project combined two loves mine: baseball and  r -- which I really enjoyed. There wasn't any complex modeling but it really challenged me in ways I didn't think it would. The visual design decisions were more difficult than I anticipated, and it also allowed me to level-up in `purrr` and `tidyeval`. Hope you enjoyed it. 
 
 
 ## References
