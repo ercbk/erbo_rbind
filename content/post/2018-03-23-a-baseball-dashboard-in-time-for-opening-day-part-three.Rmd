@@ -1,8 +1,8 @@
 ---
-title: A Baseball Dashboard in Time for Opening Day (part three)
+title: A Baseball Dashboard in Time for Opening Weekend (part three)
 author: Eric Book
 date: '2018-03-23'
-slug: a-baseball-dashboard-in-time-for-opening-day-part-three
+slug: a-baseball-dashboard-in-time-for-opening-weekend-part-three
 categories:
   - dashboards
   - dataviz
@@ -10,7 +10,6 @@ categories:
 tags:
   - shinydashboard
   - dt
-  - ggpubr
   - ggiraph
   - ggplot2
 draft: no
@@ -22,10 +21,11 @@ output:
 
 
 ```{r hid-cit, include=FALSE, message=FALSE}
+library(emo)
 library(knitcitations)
 cleanbib()
 cite_options(hyperlink = 'to.doc', citation_format = 'text', style = 'html')
-citet(c(citation('tidyverse'), citation('shinydashboard'), citation('knitcitations'), citation('DT'), citation('ggpubr'), citation('ggplot2'), citation('ggiraph')))
+citet(c(citation('tidyverse'), citation('shinydashboard'), citation('knitcitations'), citation('DT'), citation('ggiraph'), citation('widgetframe')))
 ```
 
 
@@ -432,14 +432,21 @@ blogdown::shortcode("tweet", "900033162771910656")
 ```
 
 
-In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we collected the data. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/), we manipulated the data. Now, we get to see the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`. If you want to match the colors of the visuals to a particular team, there's [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](https://www.codeofcolors.com).
+In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we collected the data and performed a little EDA. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/), we did some calculations and prepared the data to be visualized. Now, we get to ***see*** the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`.
 
 
 ## DataTable
 
-Words
+[RStudio](https://rstudio.github.io/DT/options.html) and [DataTable](https://datatables.net/reference/option/) have excellent documentation on the various features, so I won't explain every option I've enabled here. I will bring to your attention to a few things though. 
 
-```{r dt}
+If you decide to include `CSV` and `PDF` buttons, I recommend you also include the "Show <number> entries" feature. It's activated by default but I've turned it off here with `lengthChange = FALSE`. When a user downloads data using either of these buttons, only the data that is displayed is downloaded, so allowing the user to be able to choose how many rows are displayed is a good option. The problem is the default position ("lfrtip") is in the header which now is crowded with buttons and the search window. The [`dom`](https://datatables.net/reference/option/dom) option allows you to configure the location of control elements by specifying the element order. "l" represents the "entries" feature.  This order places it in the bottom left corner of the table. In my opinion this to be the most display-friendly location.
+
+I also consider the horizontal scrolling option a necessity. There's an extension `Responsive` that's supposed to make your table mobile-friendly but I've found it to be buggy. It sometimes creates edge effects that make your columns unreadable. The stable option is to enable horizontal scrolling by setting `scrollX = TRUE` (capital X).
+
+You'll also notice the javascript at the bottom. This allows you to change the background and text color of the header. If you want to match the colors of the visuals to a particular team, [teamcolorcodes.com](https://teamcolorcodes.com) or [codeofcolors.com](https://www.codeofcolors.com) provide color codes to all MLB teams and other sports teams as well.
+
+
+```{r dt, message=FALSE}
 
 library(DT)
 
@@ -471,4 +478,180 @@ library(widgetframe)
 frameWidget(dt, height = 450)
 ```
 
-Words  Words  Words
+
+
+## Cleveland Dot Plots
+
+Dot plots are the old-new hotness as an alternative to bar charts according to my twitter feed, so I thought I'd give them a look. I used this [article](uc-r.github.io/cleveland-dot-plots) from University of Cincinnati Stats (coincidence or destiny?) site to guide me.
+
+There will be two dot plots for the dashboard, but I'm only showing one here. The main issues I had were the legend placement and the value labels. If you have (or don't have) large spreads between some players and the "typical HOF'er", you'll want to play with the limits in `scale_x_continuous`. If the legend gives you problems, I'd look at `legend.position` and maybe `legend.direction`.
+
+
+```{r dot, message=FALSE, fig.height=5, fig.width=3}
+
+library(tidyverse)
+
+head(war_group, 3)
+
+war_dot <- war_group %>% 
+      filter(Name == "Adam Dunn")
+
+
+war_right_label <- war_dot %>% 
+      group_by(Group) %>% 
+      arrange(desc(Value)) %>% 
+      top_n(1)
+
+war_left_label <- war_dot %>% 
+      group_by(Group) %>% 
+      arrange(desc(Value)) %>% 
+      slice(2)
+
+ggplot(war_dot, aes(x = Value, y = Group)) +
+      geom_line(aes(group = Group)) +
+      geom_point(aes(color = Stat), size = 3) +
+      geom_text(data = war_right_label, aes(color = Stat, label = round(Value, 1)), size = 5, hjust = -0.5) +
+      geom_text(data = war_left_label, aes(color = Stat, label = round(Value, 1)), size = 5, hjust = 1.5) +
+      scale_x_continuous(limits = c(min(war_dot$Value)-30, max(war_dot$Value)+28)) + 
+      scale_color_manual(labels = c("Typical HOFer (weighted)", "Player"), values = c("#000000", "#C6011F")) +
+      labs(title = "WARtenure") +
+      theme_minimal() +
+      theme(axis.title = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            legend.justification = c(0,1),
+            legend.position = c(.1, 1),
+            legend.background = element_blank(),
+            legend.direction = "vertical",
+            plot.title = element_text(size = 20, margin = margin(b = 10))
+      )
+
+```
+
+
+
+## Interactive Line Chart
+
+
+The line chart shows the player's WAR for every season he was a Red. Hovering over each point displays its value. The horizontal dashed line is one of two vales: the median WAR per season of pitchers or the median WAR per season of position players. There were no real issues of note in this implementation.
+
+```{r line}
+
+library(ggiraph)
+
+head(war_combo_avg, 3)
+
+war_line <- war_combo_avg %>% 
+      filter(Name == "Johnny Bench")
+
+line_filtered <- war_line %>% 
+      filter(type == "WAR4")
+
+p <- ggplot(data = war_line) + 
+      geom_point_interactive(aes(x = yearId, y = WAR, group = type, tooltip = WAR), color = alpha("#000000", 0.5)) +
+      geom_point_interactive(data = line_filtered, aes(x = yearId, y = WAR, color = type, tooltip = WAR), size = 2.5, shape = 17) +
+      geom_line(aes(x = yearId, y = WAR)) +
+      # all the Median WAR values the same, taking mean is just me hacking to get a value instead of a vector for the y-intercept
+      geom_hline(aes(yintercept = mean(`Median WAR`), linetype = "Typical HOFer"), color = alpha("#C6011F", 0.5), size = 1.25) +
+      scale_linetype_manual(values = 2, guide = guide_legend(override.aes = list(color = "#C6011F"))) +
+      scale_y_continuous(limits = c(min(war_line$WAR)-5, max(war_line$WAR)+5)) +
+      labs(title = "WAR") +
+      theme_minimal() +
+      theme(axis.title = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            legend.justification = c(0,1),
+            legend.position = c(.1, 1),
+            legend.box = "horizontal",
+            legend.background = element_blank(),
+            legend.direction = "horizontal",
+            plot.title = element_text(size = 20, margin = margin(b = 10))
+      )
+
+ggiraph(ggobj = p)
+
+```
+
+
+## Dashboard
+
+I won't be going over the `shinydashboard` code in detail but you can check it out on your own, [here](https://github.com/nllspc/Sports-Analysis/tree/master/RedsJAWS/post/shiny). There is some html I'd like to highlight though. 
+
+```{r dash-color, eval=FALSE}
+
+dashBody <- dashboardBody(
+      # Changes color of header
+      tags$head(
+            tags$style(HTML('
+                            /* Changes color of title portion of header */
+                            .skin-blue .main-header .logo {
+                            background-color: #C6011F;
+                            }
+                            
+                            .skin-blue .main-header .logo:hover {
+                            background-color: #C6011F;
+                            }
+                            
+                            /* Changes color of rest of header */
+                            .skin-blue .main-header .navbar {
+                            background-color: #C6011F;
+                            }
+                            
+                            /* Changes color of sidebar toggle when hovered */
+                            .skin-blue .main-header .navbar .sidebar-toggle:hover{
+                            background-color: #000000;
+                            }
+                            
+                            '))
+            
+            ),
+
+```
+
+Placing this HTML at the beginning of `dashboardBody` will allow your to choose the colors of various elements of the header.
+
+```{r dash-error, eval=FALSE}
+
+# Stops errors being displayed in plot windows
+      tags$style(type="text/css",
+                 ".shiny-output-error { visibility: hidden; }",
+                 ".shiny-output-error:before { visibility: hidden; }"
+      ),
+
+```
+
+Normally, while the dashboard is waiting for user input, an error will displayed in place of the charts. Placing this code at the beginning of `dashboardBody` will hide this error. The code should be on the same level as `tags$head(` above.
+
+Without further ado, here's the final product...
+
+
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.min.js"></script>
+<style>
+      iframe {
+            min-width: 100%;
+      }
+</style>
+<iframe id="myIframe" src="https://erbo.shinyapps.io/jaws4-post/" scrolling="no" frameborder="no"></iframe>
+<script>
+      iFrameResize({
+            heightCalculationMethod: 'taggedElement'
+      });
+</script>
+
+
+
+## Conclusion
+
+This dashboard is actually only one item in a more tricked-out version that I finished a few weeks ago. If you'd like to take this even further, you can see my other dashboard [here](https://erbo.shinyapps.io/jaws4/) and the code is on my github. The processing scripts are a little rough, so be prepared. It was a learning experience `r emo::ji("blush")`. Hopefully, I'll get around to making them more presentable this fall.
+
+This project combined two loves mine: baseball and  r -- which I really enjoyed. There wasn't any complex modeling but it really challenged me in ways I didn't think it would. The visual design decisions were more difficult than I anticipated. It also allowed me to level-up in `purrr` and `tidyeval`. Hope you enjoyed it. 
+
+
+## References
+
+```{r bib, results='asis', echo=FALSE}
+bibliography(style = 'html')
+```

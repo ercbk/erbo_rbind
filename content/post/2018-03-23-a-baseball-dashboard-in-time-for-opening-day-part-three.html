@@ -1,8 +1,8 @@
 ---
-title: A Baseball Dashboard in Time for Opening Day (part three)
+title: A Baseball Dashboard in Time for Opening Weekend (part three)
 author: Eric Book
 date: '2018-03-23'
-slug: a-baseball-dashboard-in-time-for-opening-day-part-three
+slug: a-baseball-dashboard-in-time-for-opening-weekend-part-three
 categories:
   - dashboards
   - dataviz
@@ -10,7 +10,6 @@ categories:
 tags:
   - shinydashboard
   - dt
-  - ggpubr
   - ggiraph
   - ggplot2
 draft: no
@@ -23,19 +22,37 @@ output:
 <script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
 <script src="/rmarkdown-libs/pymjs/pym.v1.js"></script>
 <script src="/rmarkdown-libs/widgetframe-binding/widgetframe.js"></script>
+<script src="/rmarkdown-libs/d3/d3.min.js"></script>
+<script src="/rmarkdown-libs/d3-lasso/d3-lasso.min.js"></script>
+<link href="/rmarkdown-libs/ggiraph/styles.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/ggiraph/ggiraph_utils.js"></script>
+<script src="/rmarkdown-libs/ggiraph/ggiraph_over_effect.js"></script>
+<script src="/rmarkdown-libs/ggiraph/ggiraph_zoom.js"></script>
+<script src="/rmarkdown-libs/ggiraph/ggiraph_tooltip.js"></script>
+<script src="/rmarkdown-libs/ggiraph/ggiraph_selector.js"></script>
+<script src="/rmarkdown-libs/ggiraph-binding/ggiraph.js"></script>
+<script src="/rmarkdown-libs/svg_1/scripts_svg_1.js"></script>
 
 <div id="TOC">
 <ul>
 <li><a href="#datatable">DataTable</a></li>
+<li><a href="#cleveland-dot-plots">Cleveland Dot Plots</a></li>
+<li><a href="#interactive-line-chart">Interactive Line Chart</a></li>
+<li><a href="#dashboard">Dashboard</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#references">References</a></li>
 </ul>
 </div>
 
 {{% tweet "900017684590579713" %}}
 {{% tweet "900033162771910656" %}}
-<p>In <a href="https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/">part one</a>, we collected the data. In <a href="https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/">part two</a>, we manipulated the data. Now, we get to see the fruits of our labor. You’ll need these objects from part two: <code>display_table</code>, <code>jaws_group</code>, <code>war_group</code>, and <code>war_combo_avg</code>. If you want to match the colors of the visuals to a particular team, there’s <a href="https://teamcolorcodes.com">teamcolorcodes.com</a> or <a href="https://www.codeofcolors.com">codeofcolors.com</a>.</p>
+<p>In <a href="https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/">part one</a>, we collected the data and performed a little EDA. In <a href="https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/">part two</a>, we did some calculations and prepared the data to be visualized. Now, we get to <strong><em>see</em></strong> the fruits of our labor. You’ll need these objects from part two: <code>display_table</code>, <code>jaws_group</code>, <code>war_group</code>, and <code>war_combo_avg</code>.</p>
 <div id="datatable" class="section level2">
 <h2>DataTable</h2>
-<p>Words</p>
+<p><a href="https://rstudio.github.io/DT/options.html">RStudio</a> and <a href="https://datatables.net/reference/option/">DataTable</a> have excellent documentation on the various features, so I won’t explain every option I’ve enabled here. I will bring to your attention to a few things though.</p>
+<p>If you decide to include <code>CSV</code> and <code>PDF</code> buttons, I recommend you also include the “Show <number> entries” feature. It’s activated by default but I’ve turned it off here with <code>lengthChange = FALSE</code>. When a user downloads data using either of these buttons, only the data that is displayed is downloaded, so allowing the user to be able to choose how many rows are displayed is a good option. The problem is the default position (“lfrtip”) is in the header which now is crowded with buttons and the search window. The <a href="https://datatables.net/reference/option/dom"><code>dom</code></a> option allows you to configure the location of control elements by specifying the element order. “l” represents the “entries” feature. This order places it in the bottom left corner of the table. In my opinion this to be the most display-friendly location.</p>
+<p>I also consider the horizontal scrolling option a necessity. There’s an extension <code>Responsive</code> that’s supposed to make your table mobile-friendly but I’ve found it to be buggy. It sometimes creates edge effects that make your columns unreadable. The stable option is to enable horizontal scrolling by setting <code>scrollX = TRUE</code> (capital X).</p>
+<p>You’ll also notice the javascript at the bottom. This allows you to change the background and text color of the header. If you want to match the colors of the visuals to a particular team, <a href="https://teamcolorcodes.com">teamcolorcodes.com</a> or <a href="https://www.codeofcolors.com">codeofcolors.com</a> provide color codes to all MLB teams and other sports teams as well.</p>
 <pre class="r"><code>library(DT)
 
 dt &lt;- datatable(data = display_table,
@@ -55,7 +72,177 @@ dt &lt;- datatable(data = display_table,
                                &quot;}&quot;
                          ))
 )</code></pre>
+<pre><code>## Warning in dir.create(target_dir): &#39;datatables_libs\dt-ext-buttons&#39; already
+## exists</code></pre>
 <div id="htmlwidget-1" style="width:100%;height:450px;" class="widgetframe html-widget"></div>
 <script type="application/json" data-for="htmlwidget-1">{"x":{"url":"/post/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three_files/figure-html//widgets/widget_iframe-dt.html","options":{"xdomain":"*","allowfullscreen":false,"lazyload":false}},"evals":[],"jsHooks":[]}</script>
-<p>Words Words Words</p>
+</div>
+<div id="cleveland-dot-plots" class="section level2">
+<h2>Cleveland Dot Plots</h2>
+<p>Dot plots are the old-new hotness as an alternative to bar charts according to my twitter feed, so I thought I’d give them a look. I used this <a href="uc-r.github.io/cleveland-dot-plots">article</a> from University of Cincinnati Stats (coincidence or destiny?) site to guide me.</p>
+<p>There will be two dot plots for the dashboard, but I’m only showing one here. The main issues I had were the legend placement and the value labels. If you have (or don’t have) large spreads between some players and the “typical HOF’er”, you’ll want to play with the limits in <code>scale_x_continuous</code>. If the legend gives you problems, I’d look at <code>legend.position</code> and maybe <code>legend.direction</code>.</p>
+<pre class="r"><code>library(tidyverse)
+
+head(war_group, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 4
+##   Name         Group Stat  Value
+##   &lt;chr&gt;        &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt;
+## 1 Aaron Boone  3B    WAR    11.6
+## 2 Adam Dunn    LF    WAR    16.4
+## 3 Barry Larkin SS    WAR    70.2</code></pre>
+<pre class="r"><code>war_dot &lt;- war_group %&gt;% 
+      filter(Name == &quot;Adam Dunn&quot;)
+
+
+war_right_label &lt;- war_dot %&gt;% 
+      group_by(Group) %&gt;% 
+      arrange(desc(Value)) %&gt;% 
+      top_n(1)
+
+war_left_label &lt;- war_dot %&gt;% 
+      group_by(Group) %&gt;% 
+      arrange(desc(Value)) %&gt;% 
+      slice(2)
+
+ggplot(war_dot, aes(x = Value, y = Group)) +
+      geom_line(aes(group = Group)) +
+      geom_point(aes(color = Stat), size = 3) +
+      geom_text(data = war_right_label, aes(color = Stat, label = round(Value, 1)), size = 5, hjust = -0.5) +
+      geom_text(data = war_left_label, aes(color = Stat, label = round(Value, 1)), size = 5, hjust = 1.5) +
+      scale_x_continuous(limits = c(min(war_dot$Value)-30, max(war_dot$Value)+28)) + 
+      scale_color_manual(labels = c(&quot;Typical HOFer (weighted)&quot;, &quot;Player&quot;), values = c(&quot;#000000&quot;, &quot;#C6011F&quot;)) +
+      labs(title = &quot;WARtenure&quot;) +
+      theme_minimal() +
+      theme(axis.title = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            legend.justification = c(0,1),
+            legend.position = c(.1, 1),
+            legend.background = element_blank(),
+            legend.direction = &quot;vertical&quot;,
+            plot.title = element_text(size = 20, margin = margin(b = 10))
+      )</code></pre>
+<p><img src="/post/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three_files/figure-html/dot-1.png" width="288" /></p>
+</div>
+<div id="interactive-line-chart" class="section level2">
+<h2>Interactive Line Chart</h2>
+<p>The line chart shows the player’s WAR for every season he was a Red. Hovering over each point displays its value. The horizontal dashed line is one of two vales: the median WAR per season of pitchers or the median WAR per season of position players. There were no real issues of note in this implementation.</p>
+<pre class="r"><code>library(ggiraph)
+
+head(war_combo_avg, 3)</code></pre>
+<pre><code>## # A tibble: 3 x 7
+##   bbref_id  Name       yearId    WAR POS   type  `Median WAR`
+##   &lt;chr&gt;     &lt;chr&gt;       &lt;int&gt;  &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;        &lt;dbl&gt;
+## 1 luquedo01 Dolf Luque   1918 -0.140 P     WAR           2.38
+## 2 luquedo01 Dolf Luque   1919  1.14  P     WAR           2.38
+## 3 luquedo01 Dolf Luque   1922  3.10  P     WAR           2.38</code></pre>
+<pre class="r"><code>war_line &lt;- war_combo_avg %&gt;% 
+      filter(Name == &quot;Johnny Bench&quot;)
+
+line_filtered &lt;- war_line %&gt;% 
+      filter(type == &quot;WAR4&quot;)
+
+p &lt;- ggplot(data = war_line) + 
+      geom_point_interactive(aes(x = yearId, y = WAR, group = type, tooltip = WAR), color = alpha(&quot;#000000&quot;, 0.5)) +
+      geom_point_interactive(data = line_filtered, aes(x = yearId, y = WAR, color = type, tooltip = WAR), size = 2.5, shape = 17) +
+      geom_line(aes(x = yearId, y = WAR)) +
+      # all the Median WAR values the same, taking mean is just me hacking to get a value instead of a vector for the y-intercept
+      geom_hline(aes(yintercept = mean(`Median WAR`), linetype = &quot;Typical HOFer&quot;), color = alpha(&quot;#C6011F&quot;, 0.5), size = 1.25) +
+      scale_linetype_manual(values = 2, guide = guide_legend(override.aes = list(color = &quot;#C6011F&quot;))) +
+      scale_y_continuous(limits = c(min(war_line$WAR)-5, max(war_line$WAR)+5)) +
+      labs(title = &quot;WAR&quot;) +
+      theme_minimal() +
+      theme(axis.title = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            legend.justification = c(0,1),
+            legend.position = c(.1, 1),
+            legend.box = &quot;horizontal&quot;,
+            legend.background = element_blank(),
+            legend.direction = &quot;horizontal&quot;,
+            plot.title = element_text(size = 20, margin = margin(b = 10))
+      )
+
+ggiraph(ggobj = p)</code></pre>
+<div id="htmlwidget-2" style="width:672px;height:480px;" class="ggiraph html-widget"></div>
+<script type="application/json" data-for="htmlwidget-2">{"x":{"html":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" id=\"svg_1\" viewBox=\"0 0 432.00 360.00\">\n  <g>\n    <defs>\n      <clipPath id=\"cl1_0\">\n        <rect x=\"0.00\" y=\"360.00\" width=\"0.00\" height=\"72.00\"/>\n      <\/clipPath>\n    <\/defs>\n    <rect x=\"0.00\" y=\"0.00\" width=\"432.00\" height=\"360.00\" id=\"1\" clip-path=\"url(#cl1_0)\" fill=\"#FFFFFF\" fill-opacity=\"1\" stroke-width=\"0.75\" stroke=\"#FFFFFF\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/>\n    <defs>\n      <clipPath id=\"cl1_1\">\n        <rect x=\"0.00\" y=\"0.00\" width=\"432.00\" height=\"360.00\"/>\n      <\/clipPath>\n    <\/defs>\n    <defs>\n      <clipPath id=\"cl1_2\">\n        <rect x=\"20.42\" y=\"29.75\" width=\"406.10\" height=\"313.40\"/>\n      <\/clipPath>\n    <\/defs>\n    <polyline points=\"20.42,321.87 426.52,321.87\" id=\"2\" clip-path=\"url(#cl1_2)\" fill=\"none\" stroke-width=\"1.06698\" stroke=\"#EBEBEB\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"butt\"/>\n    <polyline points=\"20.42,247.06 426.52,247.06\" id=\"3\" clip-path=\"url(#cl1_2)\" fill=\"none\" stroke-width=\"1.06698\" stroke=\"#EBEBEB\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"butt\"/>\n    <polyline points=\"20.42,172.24 426.52,172.24\" id=\"4\" clip-path=\"url(#cl1_2)\" fill=\"none\" stroke-width=\"1.06698\" stroke=\"#EBEBEB\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"butt\"/>\n    <polyline points=\"20.42,97.42 426.52,97.42\" id=\"5\" clip-path=\"url(#cl1_2)\" fill=\"none\" stroke-width=\"1.06698\" stroke=\"#EBEBEB\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"butt\"/>\n    <circle cx=\"38.88\" cy=\"254.09\" r=\"1.47pt\" id=\"6\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"61.95\" cy=\"172.39\" r=\"1.47pt\" id=\"7\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"85.03\" cy=\"155.48\" r=\"1.47pt\" id=\"8\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"131.18\" cy=\"186.45\" r=\"1.47pt\" id=\"9\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"177.32\" cy=\"176.28\" r=\"1.47pt\" id=\"10\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"246.54\" cy=\"177.92\" r=\"1.47pt\" id=\"11\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"269.62\" cy=\"172.69\" r=\"1.47pt\" id=\"12\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"292.69\" cy=\"180.62\" r=\"1.47pt\" id=\"13\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"315.77\" cy=\"163.86\" r=\"1.47pt\" id=\"14\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"338.84\" cy=\"197.08\" r=\"1.47pt\" id=\"15\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"361.91\" cy=\"229.85\" r=\"1.47pt\" id=\"16\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"384.99\" cy=\"247.35\" r=\"1.47pt\" id=\"17\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"408.06\" cy=\"230.60\" r=\"1.47pt\" id=\"18\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"108.10\" cy=\"135.88\" r=\"1.47pt\" id=\"19\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"154.25\" cy=\"118.82\" r=\"1.47pt\" id=\"20\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"200.40\" cy=\"130.04\" r=\"1.47pt\" id=\"21\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <circle cx=\"223.47\" cy=\"148.45\" r=\"1.47pt\" id=\"22\" clip-path=\"url(#cl1_2)\" fill=\"#000000\" fill-opacity=\"0.5\" stroke=\"#000000\" stroke-opacity=\"0.5\"/>\n    <polygon points=\"108.10,131.18 112.17,138.23 104.03,138.23\" id=\"23\" clip-path=\"url(#cl1_2)\" fill=\"#F8766D\" fill-opacity=\"1\" stroke=\"none\"/>\n    <polygon points=\"154.25,114.12 158.32,121.17 150.18,121.17\" id=\"24\" clip-path=\"url(#cl1_2)\" fill=\"#F8766D\" fill-opacity=\"1\" stroke=\"none\"/>\n    <polygon points=\"200.40,125.34 204.47,132.39 196.33,132.39\" id=\"25\" clip-path=\"url(#cl1_2)\" fill=\"#F8766D\" fill-opacity=\"1\" stroke=\"none\"/>\n    <polygon points=\"223.47,143.75 227.54,150.80 219.40,150.80\" id=\"26\" clip-path=\"url(#cl1_2)\" fill=\"#F8766D\" fill-opacity=\"1\" stroke=\"none\"/>\n    <polyline points=\"38.88,254.09 61.95,172.39 85.03,155.48 108.10,135.88 131.18,186.45 154.25,118.82 177.32,176.28 200.40,130.04 223.47,148.45 246.54,177.92 269.62,172.69 292.69,180.62 315.77,163.86 338.84,197.08 361.91,229.85 384.99,247.35 408.06,230.60\" id=\"27\" clip-path=\"url(#cl1_2)\" fill=\"none\" stroke-width=\"1.06698\" stroke=\"#000000\" stroke-opacity=\"1\" stroke-linejoin=\"round\" stroke-linecap=\"butt\"/>\n    <line x1=\"20.42\" y1=\"212.79\" x2=\"426.52\" y2=\"212.79\" id=\"28\" clip-path=\"url(#cl1_2)\" stroke-width=\"2.66745\" stroke=\"#C6011F\" stroke-opacity=\"0.5\" stroke-dasharray=\"12,12\" stroke-linejoin=\"round\" stroke-linecap=\"butt\" fill=\"#C6011F\" fill-opacity=\"0.5\"/>\n    <defs>\n      <clipPath id=\"cl1_3\">\n        <rect x=\"0.00\" y=\"0.00\" width=\"432.00\" height=\"360.00\"/>\n      <\/clipPath>\n    <\/defs>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"7.49\" y=\"325.09\" id=\"29\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">-5<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"10.48\" y=\"250.27\" id=\"30\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">0<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"10.48\" y=\"175.46\" id=\"31\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">5<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"5.48\" y=\"100.64\" id=\"32\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">10<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"98.09\" y=\"354.52\" id=\"33\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">1970<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"213.46\" y=\"354.52\" id=\"34\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">1975<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"328.83\" y=\"354.52\" id=\"35\" font-size=\"6.60pt\" fill=\"#4D4D4D\" fill-opacity=\"1\" font-family=\"Arial\">1980<\/text>\n    <\/g>\n    <polygon points=\"79.66,39.36 83.73,46.41 75.59,46.41\" id=\"36\" clip-path=\"url(#cl1_3)\" fill=\"#F8766D\" fill-opacity=\"1\" stroke=\"none\"/>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"90.46\" y=\"47.28\" id=\"37\" font-size=\"6.60pt\" font-family=\"Arial\">WAR4<\/text>\n    <\/g>\n    <line x1=\"145.19\" y1=\"44.06\" x2=\"159.01\" y2=\"44.06\" id=\"38\" clip-path=\"url(#cl1_3)\" stroke-width=\"2.66745\" stroke=\"#C6011F\" stroke-opacity=\"1\" stroke-dasharray=\"12,12\" stroke-linejoin=\"round\" stroke-linecap=\"butt\" fill=\"#FFFFFF\" fill-opacity=\"1\"/>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"162.90\" y=\"47.28\" id=\"39\" font-size=\"6.60pt\" font-family=\"Arial\">Typical HOFer<\/text>\n    <\/g>\n    <g clip-path=\"url(#cl1_3)\">\n      <text x=\"20.42\" y=\"19.79\" id=\"40\" font-size=\"15.00pt\" font-family=\"Arial\">WAR<\/text>\n    <\/g>\n  <\/g>\n<\/svg>\n","css":".tooltip_svg_1 {position:absolute;pointer-events:none;z-index:999;padding:5px;background:black;color:white;border-radius:2px 2px 2px 2px;}\n.cl_data_id_svg_1:{}.cl_data_id_svg_1:hover{fill:orange;stroke:gray;}\n.clicked_svg_1{fill:orange;stroke:gray;}","ui_html":"<div class='ggiraph-toolbar'><div class='ggiraph-toolbar-block shinyonly'><a class='ggiraph-toolbar-icon neutral' title='lasso selection' href='javascript:lasso_on(\"svg_1\", true, \"array_selected_svg_1\", \"clicked_svg_1\");'><svg width='15pt' height='15pt' viewBox='0 0 230 230'><g><ellipse ry='65.5' rx='86.5' cy='94' cx='115.5' stroke-width='20' fill='transparent'/><ellipse ry='11.500001' rx='10.5' cy='153' cx='91.5' stroke-width='20' fill='transparent'/><line y2='210.5' x2='105' y1='164.5' x1='96' stroke-width='20'/><\/g><\/svg><\/a><a class='ggiraph-toolbar-icon drop' title='lasso anti-selection' href='javascript:lasso_on(\"svg_1\", false, \"array_selected_svg_1\", \"clicked_svg_1\");'><svg width='15pt' height='15pt' viewBox='0 0 230 230'><g><ellipse ry='65.5' rx='86.5' cy='94' cx='115.5' stroke-width='20' fill='transparent'/><ellipse ry='11.500001' rx='10.5' cy='153' cx='91.5' stroke-width='20' fill='transparent'/><line y2='210.5' x2='105' y1='164.5' x1='96' stroke-width='20'/><\/g><\/svg><\/a><\/div><\/div>","uid":"svg_1","width":"75%","funname":"init_prop_svg_1","sel_array_name":"array_selected_svg_1","selected_class":"clicked_svg_1","tooltip_opacity":0.9,"tooltip_offx":10,"tooltip_offy":0,"zoom_max":1,"selection_type":"multiple"},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="dashboard" class="section level2">
+<h2>Dashboard</h2>
+<p>I won’t be going over the <code>shinydashboard</code> code in detail but you can check it out on your own, <a href="https://github.com/nllspc/Sports-Analysis/tree/master/RedsJAWS/post/shiny">here</a>. There is some html I’d like to highlight though.</p>
+<pre class="r"><code>dashBody &lt;- dashboardBody(
+      # Changes color of header
+      tags$head(
+            tags$style(HTML(&#39;
+                            /* Changes color of title portion of header */
+                            .skin-blue .main-header .logo {
+                            background-color: #C6011F;
+                            }
+                            
+                            .skin-blue .main-header .logo:hover {
+                            background-color: #C6011F;
+                            }
+                            
+                            /* Changes color of rest of header */
+                            .skin-blue .main-header .navbar {
+                            background-color: #C6011F;
+                            }
+                            
+                            /* Changes color of sidebar toggle when hovered */
+                            .skin-blue .main-header .navbar .sidebar-toggle:hover{
+                            background-color: #000000;
+                            }
+                            
+                            &#39;))
+            
+            ),</code></pre>
+<p>Placing this HTML at the beginning of <code>dashboardBody</code> will allow your to choose the colors of various elements of the header.</p>
+<pre class="r"><code># Stops errors being displayed in plot windows
+      tags$style(type=&quot;text/css&quot;,
+                 &quot;.shiny-output-error { visibility: hidden; }&quot;,
+                 &quot;.shiny-output-error:before { visibility: hidden; }&quot;
+      ),</code></pre>
+<p>Normally, while the dashboard is waiting for user input, an error will displayed in place of the charts. Placing this code at the beginning of <code>dashboardBody</code> will hide this error. The code should be on the same level as <code>tags$head(</code> above.</p>
+<p>Without further ado, here’s the final product…</p>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/3.5.16/iframeResizer.min.js"></script>
+<style>
+      iframe {
+            min-width: 100%;
+      }
+</style>
+<iframe id="myIframe" src="https://erbo.shinyapps.io/jaws4-post/" scrolling="no" frameborder="no">
+</iframe>
+<script>
+      iFrameResize({
+            heightCalculationMethod: 'taggedElement'
+      });
+</script>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>This dashboard is actually only one item in a more tricked-out version that I finished a few weeks ago. If you’d like to take this even further, you can see my other dashboard <a href="https://erbo.shinyapps.io/jaws4/">here</a> and the code is on my github. The processing scripts are a little rough, so be prepared. It was a learning experience 😊. Hopefully, I’ll get around to making them more presentable this fall.</p>
+<p>This project combined two loves mine: baseball and r – which I really enjoyed. There wasn’t any complex modeling but it really challenged me in ways I didn’t think it would. The visual design decisions were more difficult than I anticipated. It also allowed me to level-up in <code>purrr</code> and <code>tidyeval</code>. Hope you enjoyed it.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>
+<a id='bib-Boettiger_2017'></a><a href="#cite-Boettiger_2017">[1]</a><cite> C. Boettiger. <em>knitcitations: Citations for ‘Knitr’ Markdown Files</em>. R package version 1.0.8. 2017. URL: <a href="https://CRAN.R-project.org/package=knitcitations">https://CRAN.R-project.org/package=knitcitations</a>.</cite>
+</p>
+<p>
+<a id='bib-Chang_2017'></a><a href="#cite-Chang_2017">[2]</a><cite> W. Chang and B. Borges Ribeiro. <em>shinydashboard: Create Dashboards with ‘Shiny’</em>. R package version 0.6.1. 2017. URL: <a href="https://CRAN.R-project.org/package=shinydashboard">https://CRAN.R-project.org/package=shinydashboard</a>.</cite>
+</p>
+<p>
+<a id='bib-Gohel_2017'></a><a href="#cite-Gohel_2017">[3]</a><cite> D. Gohel. <em>ggiraph: Make ‘ggplot2’ Graphics Interactive</em>. R package version 0.4.2. 2017. URL: <a href="https://CRAN.R-project.org/package=ggiraph">https://CRAN.R-project.org/package=ggiraph</a>.</cite>
+</p>
+<p>
+<a id='bib-Karambelkar_2018'></a><a href="#cite-Karambelkar_2018">[4]</a><cite> B. Karambelkar. <em>widgetframe: ‘Htmlwidgets’ in Responsive ‘iframes’</em>. <a href="https://github.com/bhaskarvk/widgetframe" class="uri">https://github.com/bhaskarvk/widgetframe</a>, <a href="https://bhaskarvk.github.io/widgetframe/" class="uri">https://bhaskarvk.github.io/widgetframe/</a>. 2018.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2017'></a><a href="#cite-Wickham_2017">[5]</a><cite> H. Wickham. <em>tidyverse: Easily Install and Load the ‘Tidyverse’</em>. R package version 1.2.1. 2017. URL: <a href="https://CRAN.R-project.org/package=tidyverse">https://CRAN.R-project.org/package=tidyverse</a>.</cite>
+</p>
+<p>
+<a id='bib-Xie_2018'></a><a href="#cite-Xie_2018">[6]</a><cite> Y. Xie. <em>DT: A Wrapper of the JavaScript Library ‘DataTables’</em>. R package version 0.4. 2018. URL: <a href="https://rstudio.github.io/DT">https://rstudio.github.io/DT</a>.</cite>
+</p>
 </div>
