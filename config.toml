@@ -35,6 +35,11 @@ post = "/blog/:year-:month-:day-:slug/"
   
   sidebarHeader = "Eric Book"
   
+  sidebarText = """Blogroll
+  </br>
+  [R-Bloggers](https://www.r-bloggers.com)  
+  """
+  
   sidebarMenuEnabled = true
   
   github = "https://github.com/nllspc/"
