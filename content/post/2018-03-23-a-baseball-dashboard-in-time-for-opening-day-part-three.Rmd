@@ -475,7 +475,7 @@ dt <- datatable(data = display_table,
 
 library(widgetframe)
 
-frameWidget(dt, width = "60%", height = 450)
+frameWidget(dt, width = "80%", height = 450)
 ```
 
 
