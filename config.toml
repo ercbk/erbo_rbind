@@ -82,10 +82,10 @@ post = "/blog/:year-:month-:day-:slug/"
   textrss = false
 
   # Website's default description
-  defaultDescription = ""
+  defaultDescription = "Blog for R programming data analysis projects"
 
   # Populate this with your own search keywords - these will appear in meta tags
-  # defaultKeywords = ["keyword1" , "keyword2" , "keyword3" , "keyword4"]
+  defaultKeywords = ["rstats" , "r" , "data analysis" , "dashboards"]
 
   # CSS override files
   # Paths should be relative to the `static` directory

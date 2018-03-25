@@ -88,7 +88,7 @@ idTTa &lt;- idTT %&gt;%
 # Missing values come along for the ride so they need removed
 indID &lt;- map_dfr(members[,&quot;Inductee&quot;], function(x) {
       filter(idTTa, name_whole == x &amp; key_bbref != &quot;&quot;)})</code></pre>
-<p>Some players were excluded from <code>indID</code> because in <code>members</code>, they have accent marks in their names. Likewise, a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.</p>
+<p>Some players were excluded from <code>indID</code> because in <code>members</code>, they have accent marks in their names. Likewise excluded, a father/son duo who have the same names in <code>idTT</code> but have Sr/Jr suffixes in <code>members</code>. All of these players will be added to <code>indID</code>. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.</p>
 <pre class="r"><code>missNamList &lt;- list(&quot;Dolf Luque&quot;, &quot;Leo Cardenas&quot;, &quot;Tony Perez&quot;, &quot;Dave Concepcion&quot;, &quot;Ken Griffey&quot;,
                     &quot;Jose Rijo&quot;, &quot;Cesar Geronimo&quot;, &quot;Pedro Borbon&quot;)
 indID &lt;- map_dfr(missNamList, function(x) {
@@ -328,7 +328,7 @@ warDat &lt;- warDat %&gt;%
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we’ll perform the calculations in <a href="https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/">part two</a> and visualize them in a <code>shinydashboard</code> in <a href="https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three/">part three</a>.</p>
+<p>We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members’ names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we’ll perform the calculations in <a href="https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-weekend-part-two/">part two</a> and visualize them in a <code>shinydashboard</code> in <a href="https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-weekend-part-three/">part three</a>.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>

@@ -157,7 +157,7 @@ blogdown::shortcode("tweet", "900033162771910656")
 ```
 
 
-In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we got the player WAR values, primary positions, and determined the tenure qualification. In part two, we'll perform the JAWS calculations and create dataframes that will be needed for our dashboard. Recall that for these calculations, you'll need `indWar`, `nomWar`, `posDat`, and `warDat` from part one.
+In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-weekend-part-one/), we got the player WAR values, primary positions, and determined the tenure qualification. In part two, we'll perform the JAWS calculations and create dataframes that will be needed for our dashboard. Recall that for these calculations, you'll need `indWar`, `nomWar`, `posDat`, and `warDat` from part one.
 
 
 
@@ -503,7 +503,7 @@ Only four objects will be required for the final post in this series: `display_t
 
 ## Conclusion
 
-In this post, we calculated the JAWS statistic and positional averages that can be used to evaluate nominees and compare members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for [part three](https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three/).
+In this post, we calculated the JAWS statistic and positional averages that can be used to evaluate nominees and compare members of the Reds Hall of Fame. We also created positional group averages which could come in handy in certain situations such as with players that were more versatile and played multiple positions throughout their career. Lastly, we produced the data sets that will be used in our visuals for [part three](https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-weekend-part-three/).
 
 
 ## References

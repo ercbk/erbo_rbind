@@ -432,7 +432,7 @@ blogdown::shortcode("tweet", "900033162771910656")
 ```
 
 
-In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-day-part-one/), we collected the data and performed a little EDA. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/), we did some calculations and prepared the data to be visualized. Now, we get to ***see*** the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`.
+In [part one](https://erbo.rbind.io/blog/2018-03-09-a-baseball-dashboard-in-time-for-opening-weekend-part-one/), we collected the data and performed a little EDA. In [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-weekend-part-two/), we did some calculations and prepared the data to be visualized. Now, we get to ***see*** the fruits of our labor. You'll need these objects from part two: `display_table`, `jaws_group`, `war_group`, and `war_combo_avg`.
 
 
 ## DataTable

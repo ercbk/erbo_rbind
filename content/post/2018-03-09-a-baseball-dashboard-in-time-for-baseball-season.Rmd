@@ -128,7 +128,7 @@ indID <- map_dfr(members[,"Inductee"], function(x) {
 ```
 
 
-Some players were excluded from `indID` because in `members`, they have accent marks in their names. Likewise, a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.
+Some players were excluded from `indID` because in `members`, they have accent marks in their names. Likewise excluded, a father/son duo who have the same names in `idTT` but have Sr/Jr suffixes in `members`. All of these players will be added to `indID`. Also, administrative personnel were removed during the filtering process, since obviously, they have no WAR values.
 
 
 ```{r id-missname}
@@ -353,7 +353,7 @@ We've generated quite a few objects in part one of this series. If you'd like to
 
 ## Conclusion
 
-We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we'll perform the calculations in [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-day-part-two/) and visualize them in a `shinydashboard` in [part three](https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-day-part-three/).
+We have the ingredients for the JAWS calculation and our dashboard. In this part, we scraped Wikipedia to get the Hall of Fame members' names. Those names were used to get Baseball-Reference IDs which in turn were used to obtain WAR values. Next, by examining the data, we determined our tenure qualification, and primary player positions were determined by the greatest number of games played at a position. Next, we'll perform the calculations in [part two](https://erbo.rbind.io/blog/2018-03-21-a-baseball-dashboard-in-time-for-opening-weekend-part-two/) and visualize them in a `shinydashboard` in [part three](https://erbo.rbind.io/blog/2018-03-23-a-baseball-dashboard-in-time-for-opening-weekend-part-three/).
 
 
 ## References
