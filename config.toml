@@ -38,6 +38,10 @@ post = "/blog/:year-:month-:day-:slug/"
   sidebarText = """Blogroll
   </br>
   [R-Bloggers](https://www.r-bloggers.com)  
+  </br>
+  </br>
+  </br>
+  <img src="http://ghchart.rshah.org/073642/nllspc" height="300" alt="Github Activity" />
   """
   
   sidebarMenuEnabled = true
