@@ -38,7 +38,7 @@ post = "/blog/:year-:month-:day-:slug/"
   sidebarText = """Blogroll
   </br>
   [R-Bloggers](https://www.r-bloggers.com)  
-  </br>
+  [R Weekly](https://rweekly.org)  
   </br>
   </br>
   <img src="http://ghchart.rshah.org/073642/nllspc" alt="Github Activity" />
