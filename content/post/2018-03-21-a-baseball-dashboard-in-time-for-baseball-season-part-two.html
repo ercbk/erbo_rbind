@@ -73,7 +73,7 @@ head(warJaws, 3)</code></pre>
 </div>
 <div id="weighting-positions-and-averages" class="section level2">
 <h2>Weighting Positions and Averages</h2>
-<p>The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we’ll add “average” players to each position pool to reduce the bias. Pitchers aren’t compared to positional players statistically so there will be two sets of average calculations. They also aren’t subdivided into Starting and Relief so there will be no need to add players to their pool.</p>
+<p>The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we’ll add “average” Hall of Fame players to each position pool to reduce the bias. Pitchers aren’t compared to positional players statistically so there will be two sets of average calculations. They also aren’t subdivided into Starting and Relief so there will be no need to add “average” players to their pool.</p>
 <pre class="r"><code># Only want inductees in our average calculation
 indJaws &lt;- warJaws %&gt;% 
       anti_join(nomWar, by = &#39;playerId&#39;)
@@ -170,7 +170,7 @@ head(wbd_avgs, 3)</code></pre>
 <h2>Create Dataframes for Visuals</h2>
 <div id="datatable" class="section level3">
 <h3>DataTable</h3>
-<p>Our first visual will be a <code>DT</code> datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines. Then pitcher averages are figured, and everything is combined into one dataframe.</p>
+<p>Our first visual will be a <code>DT</code> datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines according to their primary position. Then pitcher averages are figured, and everything is combined into one dataframe.</p>
 <pre class="r"><code># Get positional player nominees
 nomBatJaws &lt;- warJaws %&gt;% 
       anti_join(indWar, by = &#39;playerId&#39;) %&gt;% 
@@ -226,9 +226,9 @@ head(display_table, 3)</code></pre>
 ## 3 Barry Larkin SS         70.2  26.2  48.2         23.5          14.2
 ## # ... with 1 more variable: `Wt Avg JAWS4` &lt;dbl&gt;</code></pre>
 </div>
-<div id="cleveland-dot-charts" class="section level3">
-<h3>Cleveland Dot Charts</h3>
-<p>When comparing position players, position to position isn’t the only comparison that can be made. In some situations, it’s more fair to look at wider, positional group statistics. There are five groups that we’ll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Charts.</p>
+<div id="cleveland-dot-plots" class="section level3">
+<h3>Cleveland Dot Plots</h3>
+<p>When comparing position players, position to position isn’t the only comparison that can be made. In some situations, it’s more fair to look at wider, positional group statistics. There are five groups that we’ll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Plots.</p>
 <pre class="r"><code># Build df with group positions
 cornerIF &lt;- warJaws %&gt;% 
       filter(POS == &quot;1B&quot; | POS == &quot;3B&quot;) %&gt;%
@@ -320,7 +320,7 @@ glimpse(war_group)</code></pre>
 </div>
 <div id="interactive-line-chart" class="section level3">
 <h3>Interactive Line Chart</h3>
-<p>The final visual will be a line graph of player WAR values for each season played with the Reds. We’ll add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.</p>
+<p>The final visual will be a line graph of player WAR values for each season played with the Reds. We’ll add some emphasis to the four largest WAR values and a horizontal line to indicate a typical Hall of Famer.</p>
 <pre class="r"><code># WAR4 + years; add type column
 war4Dat &lt;- warDat %&gt;%
       group_by(playerId) %&gt;%

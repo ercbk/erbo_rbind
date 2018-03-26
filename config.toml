@@ -31,14 +31,15 @@ post = "/blog/:year-:month-:day-:slug/"
   # --- Start sidebar options ---
   
   # Number of last posts that will be displayed in the sidebar - set to 0 or remove to hide this section
-  sidebarRecentLimit = 5
+  sidebarRecentLimit = 7
   
   sidebarHeader = "Eric Book"
   
   sidebarText = """Blogroll
   </br>
+  [DataTau](https://www.datatau.com)  
   [R-Bloggers](https://www.r-bloggers.com)  
-  [R Weekly](https://rweekly.org)  
+  [R Weekly](https://rweekly.org)
   </br>
   </br>
   <img src="http://ghchart.rshah.org/073642/nllspc" alt="Github Activity" />

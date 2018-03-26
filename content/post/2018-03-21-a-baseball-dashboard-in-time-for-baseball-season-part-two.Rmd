@@ -209,7 +209,7 @@ head(warJaws, 3)
 
 ## Weighting Positions and Averages
 
-The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we'll add "average" players to each position pool to reduce the bias. Pitchers aren't compared to positional players statistically so there will be two sets of average calculations. They also aren't subdivided into Starting and Relief so there will be no need to add players to their pool.
+The number of players at each non-pitcher position differs quite a bit and will skew our averages, so we'll add "average" Hall of Fame players to each position pool to reduce the bias. Pitchers aren't compared to positional players statistically so there will be two sets of average calculations. They also aren't subdivided into Starting and Relief so there will be no need to add "average" players to their pool.
 
 ```{r wt-tab}
 
@@ -306,7 +306,7 @@ head(wbd_avgs, 3)
 
 ### DataTable
 
-Our first visual will be a `DT` datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines. Then pitcher averages are figured, and everything is combined into one dataframe.
+Our first visual will be a `DT` datatable with the WAR and JAWS calculations for each player. The positional JAWS and WAR averages we calculated above using only the inductees will be added to the nominee stat lines according to their primary position. Then pitcher averages are figured, and everything is combined into one dataframe.
 
 ```{r vis-tab, message=FALSE}
 
@@ -360,9 +360,9 @@ head(display_table, 3)
 ```
 
 
-### Cleveland Dot Charts
+### Cleveland Dot Plots
 
-When comparing position players, position to position isn't the only comparison that can be made. In some situations, it's more fair to look at wider, positional group statistics. There are five groups that we'll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Charts.
+When comparing position players, position to position isn't the only comparison that can be made. In some situations, it's more fair to look at wider, positional group statistics. There are five groups that we'll use: corner infielders, middle infielders, outfielders, corners, and middle. These groups along with the positional JAWS and WAR calculations will be visualized with Cleveland Dot Plots.
 
 
 ```{r vis-dot, message=FALSE}
@@ -455,7 +455,7 @@ glimpse(war_group)
 
 ### Interactive Line Chart
 
-The final visual will be a line graph of player WAR values for each season played with the Reds. We'll add some emphasis to the four largest WAR values and a line to indicate a typical hall of famer.
+The final visual will be a line graph of player WAR values for each season played with the Reds. We'll add some emphasis to the four largest WAR values and a horizontal line to indicate a typical Hall of Famer.
 
 ```{r vis-line}
 
