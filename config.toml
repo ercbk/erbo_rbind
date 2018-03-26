@@ -41,7 +41,7 @@ post = "/blog/:year-:month-:day-:slug/"
   </br>
   </br>
   </br>
-  <img src="http://ghchart.rshah.org/073642/nllspc" height="300" alt="Github Activity" />
+  <img src="http://ghchart.rshah.org/073642/nllspc" alt="Github Activity" />
   """
   
   sidebarMenuEnabled = true
