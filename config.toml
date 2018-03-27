@@ -113,6 +113,15 @@ post = "/blog/:year-:month-:day-:slug/"
   # This is not needed unless alphabetical sort is needed
   sortTaxonomyAlphabetical = true
   
+  # For twitter cards in header.html
+  twitterAuthor = "@erbo_da"
+  twitterSite = "@erbo_da"
+  
+  [params.logo]
+  url = "/img/website.png"
+  width = 100
+  height = 50
+  alt = "Analytical Endeavors"
       
   [[menu.sidebar]]
       Name = "Home"
