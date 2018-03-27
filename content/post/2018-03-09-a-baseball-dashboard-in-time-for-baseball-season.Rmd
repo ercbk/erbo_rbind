@@ -3,6 +3,7 @@ title: A Baseball Dashboard in Time for Opening Weekend (part one)
 author: Eric Book
 Description: Build a shinydashboard that features an adapted JAWS statistic for evaluating nominees and members of a MLB franchise's Hall of Fame
 date: '2018-03-09'
+twitterImg: /img/hof.png
 categories:
   - eda
   - scraping

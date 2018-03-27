@@ -119,8 +119,8 @@ post = "/blog/:year-:month-:day-:slug/"
   
   [params.logo]
   url = "website.png"
-  width = 50
-  height = 50
+  width = 200
+  height = 200
   alt = "Analytical Endeavors"
       
   [[menu.sidebar]]
