@@ -118,7 +118,7 @@ post = "/blog/:year-:month-:day-:slug/"
   twitterSite = "@erbo_da"
   
   [params.logo]
-  url = "/img/website.png"
+  url = "website.png"
   width = 50
   height = 50
   alt = "Analytical Endeavors"
