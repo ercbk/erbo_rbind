@@ -1,0 +1,436 @@
+---
+title: Create a Twitter bot for your local animal shelter using rtweet
+author: Eric Book
+date: '2018-05-03'
+description: Create a Twitter bot that tweets descriptions of adoptable pets at your local animal shelter
+slug: create-a-twitter-bot-for-your-local-animal-shelter-using-rtweet
+twitterImg: /img/animal_house.png
+categories:
+  - bot
+  - api
+  - social media
+tags:
+  - rtweet
+  - httr
+  - jsonlite
+  - magick
+  - glue
+  - taskscheduleR
+draft: yes
+output:
+  blogdown::html_page:
+    toc: yes
+    toc_depth: 2
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#create-an-app-and-a-token">Create an app and a token</a></li>
+<li><a href="#get-some-pet-data">GET some pet data</a></li>
+<li><a href="#formulate-the-tweet">Formulate the tweet</a></li>
+<li><a href="#tweet-and-automate">Tweet and automate</a></li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#acknowledgements">Acknowledgements</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+<p>A month or so ago, I came across a cool <a href="http://www.wbiw.com/local/archive/2018/03/animal-shelter-twitter-bot-is-collaboration-between-city-and-civic-code-group.php">article</a> about a civic group in Bloomington, IN called <a href="https://github.com/BMGhack">BMGhack</a> that coded a Twitter bot in Python for their local animal services department. I’d been reading articles about the earlier <code>twitteR</code> and newer <code>rtweet</code> packages for awhile and thought this was something I could tackle in R. The one I created is for Louisville Metro Animal Services (LMAS), but petfinder.com hosts pet profiles from many organizations. So you should have no problem finding one in your area. To start, let’s go ahead a create the app and get a token.</p>
+<div id="create-an-app-and-a-token" class="section level2">
+<h2>Create an app and a token</h2>
+<p>For the most part, everything is explained in Kearney’s <a href="http://rtweet.info/articles/auth.html">tutorial</a>, so I won’t rehash it here. Although, currently there’s a problem with the token that <code>create_token</code> makes. It’s a read-only token, and we need a read and write token in order to tweet using <code>post_tweet</code>.</p>
+<p>The good news is that I have a temporary fix until the issue is resolved. After making the token with <code>create_token</code>, you’ll need to regenerate your token at the apps.twitter.com site. Now, you’ll have a read and write token. Then, you replace the old token and secret values with the new token and secret values. Write your new token object to a .rds file in your home directory and Bob’s your uncle.</p>
+<pre class="r"><code>library(tidyverse)
+library(rtweet)
+
+
+
+appname &lt;- &quot;&lt;app name&gt;&quot;
+
+key &lt;- &quot;&lt;key&gt;&quot;
+
+secret &lt;- &quot;&lt;secret&gt;&quot;
+
+# create (read-only) token
+twitter_token &lt;- create_token(
+      app = appname,
+      consumer_key = key,
+      consumer_secret = secret
+)
+
+# Shows Home Directory path
+home_directory &lt;- path.expand(&quot;~/&quot;)
+
+# replace with read and write token and secret values
+twitter_token$credentials$oauth_token &lt;- &quot;&lt;new token&gt;&quot;
+twitter_token$credentials$oauth_token_secret &lt;- &quot;&lt;new token secret&gt;&quot;
+
+write_rds(twitter_token, &quot;&lt;home directory path&gt;twitter_token.rds&quot;)
+
+
+file_name &lt;- file.path(home_directory, &quot;twitter_token.rds&quot;)
+
+# create environment variable so rtweet doesnt need token loaded explicitly in order to work.
+cat(paste0(&quot;TWITTER_PAT=&quot;, file_name),
+    file = file.path(home_directory, &quot;.Renviron&quot;),
+    append = TRUE,
+    fill = TRUE)</code></pre>
+</div>
+<div id="get-some-pet-data" class="section level2">
+<h2>GET some pet data</h2>
+<p>There are two options for getting the information we need: scrape the animal services’ site or use the petfinder.com <a href="https://www.petfinder.com/developers/api-docs">API</a>. There are pros and cons for each but I’m going to use the API. To access the API, you’ll need a key and to get that key you’ll need to follow the link to the documentation above and create an account.</p>
+<p>Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there’s also have a XML or JSON option for the response format. On the <a href="https://louisvilleky.gov/government/animals-services">website</a>, the phone number and addresses are listed, so I’m going to use the zip codes to narrow the field. We’re left with three entries and from here, we see our shelter ID is “KY102”. So, now we can use the shelter.getPets method to download our pet data. I’ll go into a little more detail about the code later in the post.</p>
+<pre class="r"><code>library(jsonlite)
+library(httr)
+
+URL &lt;- &quot;http://api.petfinder.com/shelter.find&quot;
+args &lt;- list(key = &quot;&lt;key&gt;&quot;, location = &quot;Louisville, KY&quot;, format = &quot;json&quot;, count = &quot;200&quot;)
+api_json &lt;- GET(url = URL, query = args)
+
+# lets you know if any errors occurred in the GET request
+stop_for_status(api_json)
+
+# creates character vector that&#39;s needed for fromJSON
+content_json &lt;- content(api_json, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;)
+
+# creates list of nested data.frames
+obj_json &lt;- fromJSON(content_json)
+
+# Find shelter, 
+flatten(obj_json$petfinder$shelters$shelter) %&gt;% 
+      rename_at(vars(ends_with(&quot;.$t&quot;)), ~str_replace(., &quot;\\.\\$t&quot;, &quot;&quot;)) %&gt;% 
+      filter(zip == &quot;40205&quot; | zip == &quot;40218&quot;) %&gt;% 
+      select(name, email, id)
+
+                              name                                   email    id
+1         Pit Bulls of St. Francis           adopt@pitbullsofstfrancis.org KY507
+2 Louisville Metro Animal Services AnimalServicesAdoption@louisvilleky.gov KY102
+3       Kentucky Great Dane Rescue       KentuckyGreatDaneRescue@Yahoo.com KY404</code></pre>
+<p>We use our shelter id, but you’ll notice I’m only pulling 2 records. This is for EDA purposes. In the final script, I recommend you go to the shelter’s website to get an estimate of how many pets they have for adoption. After you have an estimate, you can set the <code>count</code> argument to a number greater than the records available for your shelter and it won’t be an issue. LMAS has profiles for around 120 pets, so I’ll end up setting my <code>count</code> equal to 200.</p>
+<pre class="r"><code>URL &lt;- &quot;http://api.petfinder.com/shelter.getPets&quot;
+args &lt;- list(key = &quot;&lt;key&gt;&quot;, id = &quot;KY102&quot;, format = &quot;json&quot;, output = &quot;full&quot;, count = &quot;2&quot;)
+api_json &lt;- GET(url = URL, query = args)
+
+# lets you know if any errors occurred in the GET request
+stop_for_status(api_json)
+
+# creates character vector that&#39;s needed for fromJSON
+content_json &lt;- content(api_json, as = &quot;text&quot;, encoding = &quot;UTF-8&quot;)</code></pre>
+<p>The data I’ll be using for this post are available at my github: <a href="https://github.com/nllspc/LMAS-Twitterbot/blob/master/data/vector_json.rds">content_json_eda</a> and <a href="https://github.com/nllspc/LMAS-Twitterbot/blob/master/data/vector_json2.rds">content_json</a>. <code>prettify</code> lets us investigate the nested structure of the JSON we pulled from the API. I’m only showing the top part as these structures can be quite large and complex. Here we can see the meat of the data, with which we want to work, starts three levels down, petfinder –&gt; pets –&gt; pet.</p>
+<pre class="r"><code># example data; character vector
+content_json_eda &lt;- read_rds(&quot;vector_json.rds&quot;) # 2 records
+content_json &lt;- read_rds(&quot;vector_json2.rds&quot;) # 200 records
+
+
+# Get a sense of the nested structure.
+content_json_eda %&gt;% prettify
+
+{
+    &quot;@encoding&quot;: &quot;iso-8859-1&quot;,
+    &quot;@version&quot;: &quot;1.0&quot;,
+    &quot;petfinder&quot;: {
+        &quot;@xmlns:xsi&quot;: &quot;http://www.w3.org/2001/XMLSchema-instance&quot;,
+        &quot;lastOffset&quot;: {
+            &quot;$t&quot;: &quot;2&quot;
+        },
+        &quot;pets&quot;: {
+            &quot;pet&quot;: [
+                {
+                    &quot;options&quot;: {
+                        &quot;option&quot;: {
+                            &quot;$t&quot;: &quot;altered&quot;
+                        }
+                    },
+                    &quot;status&quot;: {
+                        &quot;$t&quot;: &quot;A&quot;
+                    },
+                    &quot;contact&quot;: {
+                          ...</code></pre>
+</div>
+<div id="formulate-the-tweet" class="section level2">
+<h2>Formulate the tweet</h2>
+<p>I haven’t experienced any problems with the Petfinder.com API but if errors do occur, they should be captured by the <code>stop_for_status</code> function earlier. If not, you can check <code>obj_json$header$status$message</code> for answers. Definitions for the status messages can be found in the API documentation.</p>
+<p>After applying <code>fromJSON</code> and <code>flatten</code>, we now have a dataframe that we can manipulate by familiar data cleaning methods. Most of the cleaning isn’t noteworthy but I will mention the <code>weights</code> variable that I created. It’s an attempt to give pets that have had longer stays in the shelter a greater opportunity to be noticed by potential adopters. The greater the weight the more likely that pet is to be selected. It’s based on the <code>lastUpdate</code> variable which isn’t defined in the API documentation. I’m assuming it’s the last time the shelter updated the pet’s information, but it could be the last time Petfinder updated their information (or something else entirely). If it’s the former and judging by the lack of variation in the <code>status</code> column, it might provide some measure of length of stay. If it’s the latter, the effort could be a complete whiff.</p>
+<pre class="r"><code># creates list of nested data.frames
+obj_json &lt;- fromJSON(content_json)
+
+
+# api_message &lt;- obj_json$header$status$message
+
+
+# flatten creates a df; some cols have &quot;.$t&quot; in their names; more heavily weights pets that have been in shelter longer so those pets get more greater opportunity to be seen
+pet_df &lt;- flatten(obj_json$petfinder$pets$pet) %&gt;%
+      rename_at(vars(ends_with(&quot;.$t&quot;)), ~str_replace(., &quot;\\.\\$t&quot;, &quot;&quot;)) %&gt;%
+      mutate(lastUpdate = as.POSIXct(lastUpdate),
+             link = paste0(&quot;https://www.petfinder.com/petdetail/&quot;, id),
+             sex = recode(sex, &quot;F&quot; = &quot;Female&quot;, &quot;M&quot; = &quot;Male&quot;),
+             size = recode(size, &quot;L&quot; = &quot;Large&quot;, &quot;S&quot; = &quot;Small&quot;,
+                           &quot;M&quot; = &quot;Medium&quot;, &quot;XL&quot; = &quot;Extra Large&quot;),
+             status = recode(status, &quot;A&quot; = &quot;Adoptable&quot;, &quot;H&quot; = &quot;Hold&quot;,
+                             &quot;P&quot; = &quot;Pending&quot;, &quot;X&quot; = &quot;Adopted/Removed&quot;),
+             name = lettercase::str_title_case(tolower(name)),
+             elapsedTime = round(Sys.time() - lastUpdate, 0),
+             rank = rank(elapsedTime)
+      ) %&gt;%  
+      mutate(weights = portfolio::weight(., in.var = &quot;rank&quot;, type = &quot;linear&quot;, sides = &quot;long&quot;, size = &quot;all&quot;)) %&gt;% 
+      sample_n(size = 1, weight = weights)
+
+
+glimpse(pet_df)</code></pre>
+<pre><code>## Observations: 1
+## Variables: 26
+## $ options.option     &lt;chr&gt; &quot;altered&quot;
+## $ status             &lt;chr&gt; &quot;Adoptable&quot;
+## $ contact.phone      &lt;chr&gt; &quot;(502) 473-7387&quot;
+## $ contact.state      &lt;chr&gt; &quot;KY&quot;
+## $ contact.address2   &lt;chr&gt; &quot;3705 Manslick Road Intake Facility&quot;
+## $ contact.email      &lt;chr&gt; &quot;AnimalServicesAdoption@louisvilleky.gov&quot;
+## $ contact.city       &lt;chr&gt; &quot;Louisville&quot;
+## $ contact.zip        &lt;chr&gt; &quot;40218&quot;
+## $ contact.address1   &lt;chr&gt; &quot;3516 Newburg Road Adoption Center&quot;
+## $ age                &lt;chr&gt; &quot;Young&quot;
+## $ size               &lt;chr&gt; &quot;Large&quot;
+## $ media.photos.photo &lt;list&gt; [&lt;c(&quot;pnt&quot;, &quot;fpm&quot;, &quot;x&quot;, &quot;pn&quot;, &quot;t&quot;), c(&quot;http...
+## $ id                 &lt;chr&gt; &quot;41293085&quot;
+## $ shelterPetId       &lt;chr&gt; &quot;A638293&quot;
+## $ breeds.breed       &lt;list&gt; [[&quot;American Staffordshire Terrier&quot;]]
+## $ name               &lt;chr&gt; &quot;Noreaga&quot;
+## $ sex                &lt;chr&gt; &quot;Male&quot;
+## $ description        &lt;chr&gt; NA
+## $ mix                &lt;chr&gt; &quot;no&quot;
+## $ shelterId          &lt;chr&gt; &quot;KY102&quot;
+## $ lastUpdate         &lt;dttm&gt; 2018-03-30
+## $ animal             &lt;chr&gt; &quot;Dog&quot;
+## $ link               &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41293085&quot;
+## $ elapsedTime        &lt;time&gt; 35 days
+## $ rank               &lt;dbl&gt; 63.5
+## $ weights            &lt;dbl&gt; 0.007518797</code></pre>
+<p>Looking at the columns in <code>pet_df</code>, you can see some of the classes are lists and potentially need unnesting. <code>options.option</code> can have values that give information about whether the pet has been neutered (“altered”), housebroken, good with other animals, etc.. <code>breeds.breed</code> can have multiple values if the animal is mixed breed.</p>
+<p>Since unnesting these columns can result in different numbers of rows, the unnesting needs to occur in different code chunks. Also, the column names depend upon whether the column is a nested list or not. For example, if <code>breeds.breed</code> is nested, there will be a <code>$t</code> appended to column name. As long as these columns are non-NA, they’re added to <code>bot_df</code> which will be the primary dataframe we’ll use to create the tweet.</p>
+<pre class="r"><code># Dataframe to add columns to
+bot_df &lt;- pet_df %&gt;% 
+      select(`pet type` = animal, age, sex, size, link)
+
+# Different colnames depending on nrows unnested
+
+if(!is.na(pet_df$options.option)) {
+      pet_options &lt;- pet_df %&gt;% 
+            select(options.option) %&gt;% 
+            unnest %&gt;% 
+            rename_at(vars(matches(&quot;\\$t&quot;)), ~str_replace(., &quot;\\$t&quot;, &quot;options&quot;)) %&gt;%
+            rename_at(vars(matches(&quot;options.option&quot;)), ~str_replace(., &quot;options.option&quot;, &quot;options&quot;)) %&gt;% 
+            summarize(misc = glue::collapse(options, sep = &quot;, &quot;))
+      
+      bot_df &lt;- bot_df %&gt;% 
+            bind_cols(pet_options) %&gt;% 
+            select(`pet type`, misc, everything())
+}
+
+if(!is.na(pet_df$breeds.breed)) {
+      pet_breeds &lt;- pet_df %&gt;% 
+            select(breeds.breed) %&gt;% 
+            unnest %&gt;% 
+            rename_at(vars(matches(&quot;\\$t&quot;)), ~str_replace(., &quot;\\$t&quot;, &quot;breeds&quot;)) %&gt;%
+            rename_at(vars(matches(&quot;breeds.breed&quot;)), ~str_replace(., &quot;breeds.breed&quot;, &quot;breeds&quot;)) %&gt;% 
+            summarize(`breed(s)` = glue::collapse(breeds, sep = &quot;, &quot;))
+      
+      bot_df &lt;- bot_df %&gt;% 
+            bind_cols(pet_breeds) %&gt;% 
+            select(`pet type`, `breed(s)`, everything())
+}
+
+glimpse(bot_df)</code></pre>
+<pre><code>## Observations: 1
+## Variables: 7
+## $ `pet type` &lt;chr&gt; &quot;Dog&quot;
+## $ `breed(s)` &lt;chr&gt; &quot;American Staffordshire Terrier&quot;
+## $ misc       &lt;chr&gt; &quot;altered&quot;
+## $ age        &lt;chr&gt; &quot;Young&quot;
+## $ sex        &lt;chr&gt; &quot;Male&quot;
+## $ size       &lt;chr&gt; &quot;Large&quot;
+## $ link       &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41293085&quot;</code></pre>
+<p><code>select_if</code> keeps columns without values out of our message template so the tweet doesn’t display a “NA” when a column is vacant. On a side note, I have really started to love these special-case <code>dplyr</code> functions (-if, -at, -all). They’ve become such mental energy savers for me. On that note, I recommend you have Suzan Baert’s indispensable <code>dplyr</code> <a href="https://suzan.rbind.io/2018/01/dplyr-tutorial-1">series</a> bookmarked because there are some sytax quirks when using these functions that I don’t find completely intuitive.</p>
+<p>I had never worked with <code>glue</code> before this project, but wow, what cool package. Here, I’ve layered two different templates by collapsing the first template, adding another column, and using <code>glue_data</code> again to create my final message. If you’re unfamiliar with the package, there are two similar functions, <code>glue</code> and <code>glue_data</code>. The only difference being that <code>glue_data</code> looks for variables in its first argument instead of the calling environment. So for example, <code>glue_data</code> won’t pay attention to any <code>name</code> variable defined outside of my pipeline, because <code>bot_df</code> is its first argument.</p>
+<p>Also, you should be aware that Petfinder.com requires including “Powered by Petfinder.com” in your app, but that’s a small price to pay in order find pets some good homes.</p>
+<pre class="r"><code>message &lt;- bot_df %&gt;% 
+      select_if(~!is.na(.)) %&gt;% 
+      gather %&gt;% 
+      mutate(spec = glue::glue_data(., &quot;
+                                    {key}: {value}
+                                    &quot;)) %&gt;% 
+      summarize(spec = glue::collapse(spec, sep = &quot;\n&quot;)) %&gt;% 
+      add_column(name = pet_df$name) %&gt;% 
+      mutate(message = glue::glue_data(., &quot;
+                                  {name} is:
+                                  {spec}
+                                  #adoptdontshop #rescue #adoptme #shelterpets
+                                  Powered by Petfinder.com
+                                  &quot;)) %&gt;% 
+      select(message)
+
+head(message)</code></pre>
+<pre><code>##                                                                                                                                                                                                                                               message
+## 1 Noreaga is:\npet type: Dog\nbreed(s): American Staffordshire Terrier\nmisc: altered\nage: Young\nsex: Male\nsize: Large\nlink: https://www.petfinder.com/petdetail/41293085\n#adoptdontshop #rescue #adoptme #shelterpets\nPowered by Petfinder.com</code></pre>
+<p>You can’t have a pet app and not have an oversized image that unleashes all the cuteness. Gotta tug on those heart strings. Unfortunately, Twitter doesn’t display images from an image link, so we’re going to have to jump through some hoops. Twitter does permit image files to be uploaded, and one of our columns has links to pictures with varying resolutions. We pull the image into our environment from the URL and write it to a temporary file on our disk that will be fed to <code>post_tweet</code> later.</p>
+<pre class="r"><code># Some images are blurry on Twitter, but row 3 seems to work alright
+
+if(is.null(pet_df$media.photos.photo[[1]])) {
+      # Default photo if no photo is provided
+      img_url &lt;- &quot;http://www.dogsinpictures.com/images/dog-cat-bunny-bird-love.jpg&quot;
+      image_obj &lt;- magick::image_read(img_url)
+      tmp &lt;- tempfile(fileext=&quot;.jpg&quot;)
+      magick::image_write(image_obj, path = tmp, format = &quot;jpg&quot;)
+}else{
+      img_df &lt;- pet_df %&gt;%
+            select(media.photos.photo) %&gt;%
+            unnest %&gt;%
+            slice(3)
+      img_url &lt;- img_df$`$t`[[1]]
+      
+      image_obj &lt;- magick::image_read(img_url)
+      tmp &lt;- tempfile(fileext=&quot;.jpg&quot;)
+      magick::image_write(image_obj, path = tmp, format = &quot;jpg&quot;)
+}</code></pre>
+</div>
+<div id="tweet-and-automate" class="section level2">
+<h2>Tweet and automate</h2>
+<p>We’re set to tweet!</p>
+<pre class="r"><code>post_tweet(message[[1]], media = tmp)</code></pre>
+{{% tweet "990798251577237504" %}}
+<p>To be a bot though, it needs to be automated. One way to accomplish this is to set up Windows Task Scheduler. You can create the task through the program itself. In that case, I recommend you check out the bottom of McCann’s <a href="https://rpubs.com/mccannecology/54352">post</a> on RPubs. I used the <code>taskscheduleR</code> package which I preferred because of the log file it creates. Task Scheduler has a history tab and a log but it doesn’t show you any useful information if an error is thrown. If you do use <a href="https://github.com/nosac/taskscheduleR">taskscheduleR</a> and its add-in, make sure the date format matches your computer’s.</p>
+<p>Once your task is initiated. I recommend setting a few options in Task Scheduler. In your task’s general tab, you want to make sure the “run with highest privileges” box is ticked. Otherwise, the UAC box pops-up everytime the task runs. Also, tick “Run whether user is logged on or not” and (if necessary) “do not store password…”. Ticking those boxes will make it so the task runs in the background and doesn’t open a window. There are some other settings worth considering, so you should do some investigating on your own. Also, make sure Rscript.exe has high enough permissions. I gave mine “full control”, but it may not need to be that high.</p>
+<p>Lastly, you have to read-in the token and point to it explicitly in <code>post_tweet</code>. Otherwise, for some reason, when the script is executed, lines get written to your .Renviron and bogus copies of your token file are created.</p>
+<pre class="r"><code>twitter_token &lt;- read_rds(&quot;&lt;home directory&gt;twitter_token.rds&quot;)
+
+post_tweet(message[[1]], media = tmp, token = twitter_token)
+
+file.remove(tmp)</code></pre>
+<p><details><summary>Session info</summary></p>
+<pre class="r"><code>Session info --------------------------------------------------------------------------------------------------------
+ setting  value                       
+ version  R version 3.5.0 (2018-04-23)
+ system   i386, mingw32               
+ ui       RStudio (1.1.423)           
+ language (EN)                        
+ collate  English_United States.1252  
+ tz       America/New_York            
+ date     2018-05-03                  
+
+Packages ------------------------------------------------------------------------------------------------------------
+ package    * version date       source        
+ assertthat   0.2.0   2017-04-11 CRAN (R 3.5.0)
+ base       * 3.5.0   2018-04-23 local         
+ bindr        0.1.1   2018-03-13 CRAN (R 3.5.0)
+ bindrcpp   * 0.2.2   2018-03-29 CRAN (R 3.5.0)
+ broom        0.4.4   2018-03-29 CRAN (R 3.5.0)
+ cellranger   1.1.0   2016-07-27 CRAN (R 3.5.0)
+ cli          1.0.0   2017-11-05 CRAN (R 3.5.0)
+ colorspace   1.3-2   2016-12-14 CRAN (R 3.5.0)
+ compiler     3.5.0   2018-04-23 local         
+ crayon       1.3.4   2017-09-16 CRAN (R 3.5.0)
+ curl         3.2     2018-03-28 CRAN (R 3.5.0)
+ datasets   * 3.5.0   2018-04-23 local         
+ devtools     1.13.5  2018-02-18 CRAN (R 3.5.0)
+ digest       0.6.15  2018-01-28 CRAN (R 3.5.0)
+ dplyr      * 0.7.4   2017-09-28 CRAN (R 3.5.0)
+ forcats    * 0.3.0   2018-02-19 CRAN (R 3.5.0)
+ foreign      0.8-70  2017-11-28 CRAN (R 3.5.0)
+ ggplot2    * 2.2.1   2016-12-30 CRAN (R 3.5.0)
+ glue         1.2.0   2017-10-29 CRAN (R 3.5.0)
+ graphics   * 3.5.0   2018-04-23 local         
+ grDevices  * 3.5.0   2018-04-23 local         
+ grid         3.5.0   2018-04-23 local         
+ gtable       0.2.0   2016-02-26 CRAN (R 3.5.0)
+ haven        1.1.1   2018-01-18 CRAN (R 3.5.0)
+ hms          0.4.2   2018-03-10 CRAN (R 3.5.0)
+ httr       * 1.3.1   2017-08-20 CRAN (R 3.5.0)
+ jsonlite   * 1.5     2017-06-01 CRAN (R 3.5.0)
+ knitr        1.20    2018-02-20 CRAN (R 3.5.0)
+ lattice      0.20-35 2017-03-25 CRAN (R 3.5.0)
+ lazyeval     0.2.1   2017-10-29 CRAN (R 3.5.0)
+ lettercase   0.13.1  2016-03-03 CRAN (R 3.5.0)
+ lubridate    1.7.4   2018-04-11 CRAN (R 3.5.0)
+ magick       1.8     2018-03-19 CRAN (R 3.5.0)
+ magrittr     1.5     2014-11-22 CRAN (R 3.5.0)
+ memoise      1.1.0   2017-04-21 CRAN (R 3.5.0)
+ methods    * 3.5.0   2018-04-23 local         
+ mime         0.5     2016-07-07 CRAN (R 3.5.0)
+ mnormt       1.5-5   2016-10-15 CRAN (R 3.5.0)
+ modelr       0.1.1   2017-07-24 CRAN (R 3.5.0)
+ munsell      0.4.3   2016-02-13 CRAN (R 3.5.0)
+ nlme         3.1-137 2018-04-07 CRAN (R 3.5.0)
+ openssl      1.0.1   2018-03-03 CRAN (R 3.5.0)
+ parallel     3.5.0   2018-04-23 local         
+ pillar       1.2.1   2018-02-27 CRAN (R 3.5.0)
+ pkgconfig    2.0.1   2017-03-21 CRAN (R 3.5.0)
+ plyr         1.8.4   2016-06-08 CRAN (R 3.5.0)
+ portfolio    0.4-7   2015-01-29 CRAN (R 3.5.0)
+ psych        1.8.3.3 2018-03-30 CRAN (R 3.5.0)
+ purrr      * 0.2.4   2017-10-18 CRAN (R 3.5.0)
+ R6           2.2.2   2017-06-17 CRAN (R 3.5.0)
+ Rcpp         0.12.16 2018-03-13 CRAN (R 3.5.0)
+ readr      * 1.1.1   2017-05-16 CRAN (R 3.5.0)
+ readxl       1.1.0   2018-04-20 CRAN (R 3.5.0)
+ reshape2     1.4.3   2017-12-11 CRAN (R 3.5.0)
+ rlang        0.2.0   2018-02-20 CRAN (R 3.5.0)
+ rstudioapi   0.7     2017-09-07 CRAN (R 3.5.0)
+ rtweet     * 0.6.0   2017-11-16 CRAN (R 3.5.0)
+ rvest        0.3.2   2016-06-17 CRAN (R 3.5.0)
+ scales       0.5.0   2017-08-24 CRAN (R 3.5.0)
+ stats      * 3.5.0   2018-04-23 local         
+ stringi      1.1.7   2018-03-12 CRAN (R 3.5.0)
+ stringr    * 1.3.0   2018-02-19 CRAN (R 3.5.0)
+ tibble     * 1.4.2   2018-01-22 CRAN (R 3.5.0)
+ tidyr      * 0.8.0   2018-01-29 CRAN (R 3.5.0)
+ tidyselect   0.2.4   2018-02-26 CRAN (R 3.5.0)
+ tidyverse  * 1.2.1   2017-11-14 CRAN (R 3.5.0)
+ tools        3.5.0   2018-04-23 local         
+ utils      * 3.5.0   2018-04-23 local         
+ withr        2.1.2   2018-03-15 CRAN (R 3.5.0)
+ xml2         1.2.0   2018-01-24 CRAN (R 3.5.0)
+ yaml         2.1.18  2018-03-08 CRAN (R 3.5.0)</code></pre>
+<p></details></p>
+</div>
+<div id="next-steps" class="section level2">
+<h2>Next Steps</h2>
+<p>This method should work fine if you’re hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current <code>rtweet</code> package, I don’t think the solution is straight-forward. I haven’t delved into it too deeply, but one problem is the image input for <code>post_tweet</code> is limited to a “path”. I did do a cursory examination of the <code>post_tweet</code> function and I think it can modified without too much trouble to accept an image object that’s stored in memory. As for the token portion of issue, I haven’t looked into it at all. The <code>twitteR</code> package is scheduled for a “leisurely deprecation”, but after skimming a few articles that use that package, I think there might be some code in there could help. If anyone finds a solution, I’d be very interested.</p>
+</div>
+<div id="acknowledgements" class="section level2">
+<h2>Acknowledgements</h2>
+<p>Thanks to <a href="https://github.com/sdcharle">Steve Charlesworth</a> for taking the time to answer some questions regarding his bot.</p>
+<p>Thanks to <a href="https://www.linkedin.com/in/-mgo-">Matthew Gotth-Olsen</a> for liaising with Louisville Metro Animal Services</p>
+<p>Special Thanks to</p>
+<p><img src="/charts/louisville-rstats-hex.png" width="100px" height="100px" /></p>
+<p><a href="https://github.com/louisville-rstats">Louisville RStats</a></p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>
+<a id='bib-Boettiger_2017'></a><a href="#cite-Boettiger_2017">[1]</a><cite> C. Boettiger. <em>knitcitations: Citations for ‘Knitr’ Markdown Files</em>. R package version 1.0.8. 2017. URL: <a href="https://CRAN.R-project.org/package=knitcitations">https://CRAN.R-project.org/package=knitcitations</a>.</cite>
+</p>
+<p>
+<a id='bib-Brown_2016'></a><a href="#cite-Brown_2016">[2]</a><cite> C. Brown. <em>lettercase: Utilities for Formatting Strings with Consistent Capitalization, Word Breaks and White Space</em>. R package version 0.13.1. 2016. URL: <a href="https://CRAN.R-project.org/package=lettercase">https://CRAN.R-project.org/package=lettercase</a>.</cite>
+</p>
+<p>
+<a id='bib-c_2017'></a><a href="#cite-c_2017">[3]</a><cite> c, e. =. “<a href="mailto:jwijffels@bnosac.be%22">jwijffels@bnosac.be&quot;</a>;), person and person)). <em>taskscheduleR: Schedule R Scripts and Processes with the Windows Task Scheduler</em>. R package version 1.1. 2017. URL: <a href="https://CRAN.R-project.org/package=taskscheduleR">https://CRAN.R-project.org/package=taskscheduleR</a>.</cite>
+</p>
+<p>
+<a id='bib-Hester_2017'></a><a href="#cite-Hester_2017">[4]</a><cite> J. Hester. <em>glue: Interpreted String Literals</em>. R package version 1.2.0. 2017. URL: <a href="https://CRAN.R-project.org/package=glue">https://CRAN.R-project.org/package=glue</a>.</cite>
+</p>
+<p>
+<a id='bib-rtweet-package'></a><a href="#cite-rtweet-package">[5]</a><cite> M. W. Kearney. <em>rtweet: Collecting Twitter Data</em>. R package version 0.6.0. 2017. URL: <a href="https://cran.r-project.org/package=rtweet">https://cran.r-project.org/package=rtweet</a>.</cite>
+</p>
+<p>
+<a id='bib-Ooms_2018'></a><a href="#cite-Ooms_2018">[6]</a><cite> J. Ooms. <em>magick: Advanced Graphics and Image-Processing in R</em>. R package version 1.8. 2018. URL: <a href="https://CRAN.R-project.org/package=magick">https://CRAN.R-project.org/package=magick</a>.</cite>
+</p>
+<p>
+<a id='bib-Ooms_2014'></a><a href="#cite-Ooms_2014">[7]</a><cite> J. Ooms. “The jsonlite Package: A Practical and Consistent Mapping Between JSON Data and R Objects”. In: <em>arXiv:1403.2805 [stat.CO]</em> (2014). URL: <a href="https://arxiv.org/abs/1403.2805">https://arxiv.org/abs/1403.2805</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2017'></a><a href="#cite-Wickham_2017">[8]</a><cite> H. Wickham. <em>httr: Tools for Working with URLs and HTTP</em>. R package version 1.3.1. 2017. URL: <a href="https://CRAN.R-project.org/package=httr">https://CRAN.R-project.org/package=httr</a>.</cite>
+</p>
+<p>
+<a id='bib-Wickham_2017a'></a><a href="#cite-Wickham_2017a">[9]</a><cite> H. Wickham. <em>tidyverse: Easily Install and Load the ‘Tidyverse’</em>. R package version 1.2.1. 2017. URL: <a href="https://CRAN.R-project.org/package=tidyverse">https://CRAN.R-project.org/package=tidyverse</a>.</cite>
+</p>
+</div>
