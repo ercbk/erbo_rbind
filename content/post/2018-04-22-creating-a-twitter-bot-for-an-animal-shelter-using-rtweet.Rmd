@@ -16,7 +16,6 @@ tags:
   - magick
   - glue
   - taskscheduleR
-draft: no
 output:
   blogdown::html_page:
     toc: yes
