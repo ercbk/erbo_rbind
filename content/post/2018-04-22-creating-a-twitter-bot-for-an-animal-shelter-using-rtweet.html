@@ -179,7 +179,7 @@ pet_df &lt;- flatten(obj_json$petfinder$pets$pet) %&gt;%
 glimpse(pet_df)</code></pre>
 <pre><code>## Observations: 1
 ## Variables: 26
-## $ options.option     &lt;chr&gt; &quot;altered&quot;
+## $ options.option     &lt;chr&gt; NA
 ## $ status             &lt;chr&gt; &quot;Adoptable&quot;
 ## $ contact.phone      &lt;chr&gt; &quot;(502) 473-7387&quot;
 ## $ contact.state      &lt;chr&gt; &quot;KY&quot;
@@ -189,22 +189,22 @@ glimpse(pet_df)</code></pre>
 ## $ contact.zip        &lt;chr&gt; &quot;40218&quot;
 ## $ contact.address1   &lt;chr&gt; &quot;3516 Newburg Road Adoption Center&quot;
 ## $ age                &lt;chr&gt; &quot;Young&quot;
-## $ size               &lt;chr&gt; &quot;Medium&quot;
-## $ media.photos.photo &lt;list&gt; [&lt;c(&quot;pnt&quot;, &quot;fpm&quot;, &quot;x&quot;, &quot;pn&quot;, &quot;t&quot;), c(&quot;http...
-## $ id                 &lt;chr&gt; &quot;41246115&quot;
-## $ shelterPetId       &lt;chr&gt; &quot;A637064&quot;
-## $ breeds.breed       &lt;list&gt; [[&quot;Pit Bull Terrier&quot;]]
-## $ name               &lt;chr&gt; &quot;Ina&quot;
-## $ sex                &lt;chr&gt; &quot;Female&quot;
+## $ size               &lt;chr&gt; &quot;Large&quot;
+## $ media.photos.photo &lt;list&gt; [NULL]
+## $ id                 &lt;chr&gt; &quot;41246141&quot;
+## $ shelterPetId       &lt;chr&gt; &quot;A637424&quot;
+## $ breeds.breed       &lt;list&gt; [[&quot;American Shorthair&quot;]]
+## $ name               &lt;chr&gt; &quot;Declan&quot;
+## $ sex                &lt;chr&gt; &quot;Male&quot;
 ## $ description        &lt;chr&gt; NA
 ## $ mix                &lt;chr&gt; &quot;no&quot;
 ## $ shelterId          &lt;chr&gt; &quot;KY102&quot;
 ## $ lastUpdate         &lt;dttm&gt; 2018-03-23
-## $ animal             &lt;chr&gt; &quot;Dog&quot;
-## $ link               &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246115&quot;
+## $ animal             &lt;chr&gt; &quot;Cat&quot;
+## $ link               &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246141&quot;
 ## $ elapsedTime        &lt;time&gt; 43 days
 ## $ rank               &lt;dbl&gt; 99.5
-## $ weights            &lt;dbl&gt; 0.01207564</code></pre>
+## $ weights            &lt;dbl&gt; 0.01287309</code></pre>
 <p>Looking at the columns in <code>pet_df</code>, you can see some of the classes are lists and potentially need unnesting. <code>options.option</code> can have values that give information about whether the pet has been neutered (“altered”), housebroken, good with other animals, etc.. <code>breeds.breed</code> can have multiple values if the animal is mixed breed.</p>
 <p>Since unnesting these columns can result in different numbers of rows, the unnesting needs to occur in different code chunks. Also, the column names depend upon whether the column is a nested list or not. For example, if <code>breeds.breed</code> is nested, there will be a <code>$t</code> appended to column name. As long as these columns are non-NA, they’re added to <code>bot_df</code> which will be the primary dataframe we’ll use to create the tweet.</p>
 <pre class="r"><code># Dataframe to add columns to
@@ -241,17 +241,16 @@ if(!is.na(pet_df$breeds.breed)) {
 
 glimpse(bot_df)</code></pre>
 <pre><code>## Observations: 1
-## Variables: 7
-## $ `pet type` &lt;chr&gt; &quot;Dog&quot;
-## $ `breed(s)` &lt;chr&gt; &quot;Pit Bull Terrier&quot;
-## $ misc       &lt;chr&gt; &quot;altered&quot;
+## Variables: 6
+## $ `pet type` &lt;chr&gt; &quot;Cat&quot;
+## $ `breed(s)` &lt;chr&gt; &quot;American Shorthair&quot;
 ## $ age        &lt;chr&gt; &quot;Young&quot;
-## $ sex        &lt;chr&gt; &quot;Female&quot;
-## $ size       &lt;chr&gt; &quot;Medium&quot;
-## $ link       &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246115&quot;</code></pre>
-<p><code>select_if</code> keeps columns without values out of our message template so the tweet doesn’t display a “NA” when a column is vacant. On a side note, I have really started to love these special-case <code>dplyr</code> functions (-if, -at, -all). They’ve become such mental energy savers for me. On that note, I recommend you have Suzan Baert’s indispensable <code>dplyr</code> <a href="https://suzan.rbind.io/2018/01/dplyr-tutorial-1">series</a> bookmarked because there are some sytax quirks when using these functions that I don’t find completely intuitive.</p>
+## $ sex        &lt;chr&gt; &quot;Male&quot;
+## $ size       &lt;chr&gt; &quot;Large&quot;
+## $ link       &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246141&quot;</code></pre>
+<p><code>select_if</code> keeps columns without values out of our message template so the tweet doesn’t display a “NA” when a column is vacant. On a side note, I have really started to love these special-case <code>dplyr</code> functions (-if, -at, -all). They’ve become such mental energy savers for me. I recommend you have Suzan Baert’s indispensable <code>dplyr</code> <a href="https://suzan.rbind.io/2018/01/dplyr-tutorial-1">series</a> bookmarked because there are some sytax quirks when using these functions that I don’t find completely intuitive.</p>
 <p>I had never worked with <code>glue</code> before this project, but wow, what cool package. Here, I’ve layered two different templates by collapsing the first template, adding another column, and using <code>glue_data</code> again to create my final message. If you’re unfamiliar with the package, there are two similar functions, <code>glue</code> and <code>glue_data</code>. The only difference being that <code>glue_data</code> looks for variables in its first argument instead of the calling environment. So for example, <code>glue_data</code> won’t pay attention to any <code>name</code> variable defined outside of my pipeline, because <code>bot_df</code> is its first argument.</p>
-<p>Also, you should be aware that Petfinder.com requires including “Powered by Petfinder.com” in your app, but that’s a small price to pay in order find pets some good homes.</p>
+<p>Also, you should be aware that Petfinder.com requires including “Powered by Petfinder.com” in your app. It’s a small price to pay in order to help some pets find good homes.</p>
 <pre class="r"><code>message &lt;- bot_df %&gt;% 
       select_if(~!is.na(.)) %&gt;% 
       gather %&gt;% 
@@ -269,8 +268,8 @@ glimpse(bot_df)</code></pre>
       select(message)
 
 head(message)</code></pre>
-<pre><code>##                                                                                                                                                                                                                                message
-## 1 Ina is:\npet type: Dog\nbreed(s): Pit Bull Terrier\nmisc: altered\nage: Young\nsex: Female\nsize: Medium\nlink: https://www.petfinder.com/petdetail/41246115\n#adoptdontshop #rescue #adoptme #shelterpets\nPowered by Petfinder.com</code></pre>
+<pre><code>##                                                                                                                                                                                                                   message
+## 1 Declan is:\npet type: Cat\nbreed(s): American Shorthair\nage: Young\nsex: Male\nsize: Large\nlink: https://www.petfinder.com/petdetail/41246141\n#adoptdontshop #rescue #adoptme #shelterpets\nPowered by Petfinder.com</code></pre>
 <p>You can’t have a pet app and not have an oversized image that unleashes all the cuteness. Gotta tug on those heart strings. Unfortunately, Twitter doesn’t display images from an image link, so we’re going to have to jump through some hoops. Twitter does permit image files to be uploaded, and one of our columns has links to pictures with varying resolutions. We pull the image into our environment from the URL and write it to a temporary file on our disk that will be fed to <code>post_tweet</code> later.</p>
 <pre class="r"><code># Some images are blurry on Twitter, but row 3 seems to work alright
 
@@ -393,7 +392,8 @@ Packages -----------------------------------------------------------------------
 </div>
 <div id="next-steps" class="section level2">
 <h2>Next Steps</h2>
-<p>This method should work fine if you’re hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current <code>rtweet</code> package, I don’t think the solution is straight-forward. I haven’t delved into it too deeply, but one problem is the image input for <code>post_tweet</code> is limited to a “path”. I did do a cursory examination of the <code>post_tweet</code> function and I think it can modified without too much trouble to accept an image object that’s stored in memory. As for the token portion of issue, I haven’t looked into it at all. The <code>twitteR</code> package is scheduled for a “leisurely deprecation”, but after skimming a few articles that use that package, I think there might be some code in there could help. If anyone finds a solution, I’d be very interested.</p>
+<p>This method should work fine if you’re hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current <code>rtweet</code> package, I don’t think the solution is straight-forward. I haven’t delved into it too deeply, but one problem is the image input for <code>post_tweet</code> is limited to a “path”. I did do a cursory examination of the <code>post_tweet</code> function and I think it can modified without too much trouble to accept an image object that’s stored in memory.</p>
+<p>As for the token portion of issue, I haven’t looked into it at all. The <code>twitteR</code> package is scheduled for a “leisurely deprecation”. From my memory of a few articles that used that package, I think there might be some code in there could help. It’s just a hunch though. If anyone finds a solution, I’d be very interested.</p>
 </div>
 <div id="acknowledgements" class="section level2">
 <h2>Acknowledgements</h2>

@@ -295,11 +295,11 @@ glimpse(bot_df)
 
 
 
-`select_if` keeps columns without values out of our message template so the tweet doesn't display a "NA" when a column is vacant. On a side note, I have really started to love these special-case `dplyr` functions (-if, -at, -all). They've become such mental energy savers for me. On that note, I recommend you have Suzan Baert's indispensable `dplyr` [series](https://suzan.rbind.io/2018/01/dplyr-tutorial-1) bookmarked because there are some sytax quirks when using these functions that I don't find completely intuitive.
+`select_if` keeps columns without values out of our message template so the tweet doesn't display a "NA" when a column is vacant. On a side note, I have really started to love these special-case `dplyr` functions (-if, -at, -all). They've become such mental energy savers for me. I recommend you have Suzan Baert's indispensable `dplyr` [series](https://suzan.rbind.io/2018/01/dplyr-tutorial-1) bookmarked because there are some sytax quirks when using these functions that I don't find completely intuitive.
 
 I had never worked with `glue` before this project, but wow, what cool package. Here, I've layered two different templates by collapsing the first template, adding another column, and using `glue_data` again to create my final message. If you're unfamiliar with the package, there are two similar functions, `glue` and `glue_data`. The only difference being that `glue_data` looks for variables in its first argument instead of the calling environment. So for example, `glue_data` won't pay attention to any `name` variable defined outside of my pipeline, because `bot_df` is its first argument. 
 
-Also, you should be aware that Petfinder.com requires including "Powered by Petfinder.com" in your app, but that's a small price to pay in order find pets some good homes.
+Also, you should be aware that Petfinder.com requires including "Powered by Petfinder.com" in your app. It's a small price to pay in order to help some pets find good homes.
 
 
 
@@ -494,7 +494,9 @@ Packages -----------------------------------------------------------------------
 ## Next Steps
 
 
-This method should work fine if you're hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current `rtweet` package, I don't think the solution is straight-forward. I haven't delved into it too deeply, but one problem is the image input for `post_tweet` is limited to a "path". I did do a cursory examination of the `post_tweet` function and I think it can modified without too much trouble to accept an image object that's stored in memory. As for the token portion of issue, I haven't looked into it at all. The `twitteR` package is scheduled for a "leisurely deprecation", but after skimming a few articles that use that package, I think there might be some code in there could help. If anyone finds a solution, I'd be very interested.
+This method should work fine if you're hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current `rtweet` package, I don't think the solution is straight-forward. I haven't delved into it too deeply, but one problem is the image input for `post_tweet` is limited to a "path". I did do a cursory examination of the `post_tweet` function and I think it can modified without too much trouble to accept an image object that's stored in memory. 
+
+As for the token portion of issue, I haven't looked into it at all. The `twitteR` package is scheduled for a "leisurely deprecation". From my memory of a few articles that used that package, I think there might be some code in there could help. It's just a hunch though. If anyone finds a solution, I'd be very interested.
 
 
 
