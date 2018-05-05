@@ -97,7 +97,7 @@ cat(paste0("TWITTER_PAT=", file_name),
 
 There are two options for getting the information we need: scrape the animal services' site or use the petfinder.com [API](https://www.petfinder.com/developers/api-docs). There are pros and cons for each but I'm going to use the API. To access the API, you'll need a key and to get that key you'll need to follow the link to the documentation above and create an account.
 
-Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there's also have a XML or JSON option for the response format. On the [website](https://louisvilleky.gov/government/animals-services), the phone number and addresses are listed, so I'm going to use the zip codes to narrow the field. We're left with three entries and from here, we see our shelter ID is "KY102". So, now we can use the shelter.getPets method to download our pet data. I'll go into a little more detail about the code later in the post.
+Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there's also have a XML or JSON option for the response format. On the LMAS [website](https://louisvilleky.gov/government/animals-services), the phone number and addresses are listed, so I'm going to use the zip codes to narrow the field. We're left with three entries and from here, we see our shelter ID is "KY102". So, now we can use the shelter.getPets method to download our pet data. I'll go into a little more detail about the code later in the post.
 
 
 
@@ -135,7 +135,7 @@ flatten(obj_json$petfinder$shelters$shelter) %>%
 
 
 
-We use our shelter id, but you'll notice I'm only pulling 2 records. This is for EDA purposes. In the final script, I recommend you go to the shelter's website to get an estimate of how many pets they have for adoption. After you have an estimate, you can set the `count` argument to a number greater than the records available for your shelter and it won't be an issue. LMAS has profiles for around 120 pets, so I'll end up setting my `count` equal to 200.
+Next, we use our shelter id to pull some pet data, but you'll notice I'm only pulling 2 records. This is for EDA purposes. In the final script, I recommend you go to your shelter's website to get an estimate of how many pets they have for adoption. After you have an estimate, you can set the `count` argument to a number greater than the records available for your shelter and it won't be an issue. LMAS has profiles for around 120 pets, so I ended up setting my `count` equal to 200.
 
 
 
@@ -201,7 +201,7 @@ content_json_eda %>% prettify
 
 I haven't experienced any problems with the Petfinder.com API but if errors do occur, they should be captured by the `stop_for_status` function earlier. If not, you can check `obj_json$header$status$message` for answers. Definitions for the status messages can be found in the API documentation.
 
-After applying `fromJSON` and `flatten`, we now have a dataframe that we can manipulate by familiar data cleaning methods. Most of the cleaning isn't noteworthy but I will mention the `weights` variable that I created. It's an attempt to give pets that have had longer stays in the shelter a greater opportunity to be noticed by potential adopters. The greater the weight the more likely that pet is to be selected. It's based on the `lastUpdate` variable which isn't defined in the API documentation. I'm assuming it's the last time the shelter updated the pet's information, but it could be the last time Petfinder updated their information (or something else entirely). If it's the former and judging by the lack of variation in the `status` column, it might provide some measure of length of stay. If it's the latter, the effort could be a complete whiff. 
+After applying `fromJSON` and `flatten`, we now have a dataframe that we can manipulate by familiar data cleaning methods. Most of the cleaning isn't noteworthy, but I will mention the `weights` variable that I created. It's an attempt to give pets that have had longer stays in the shelter a greater opportunity to be noticed by potential adopters. The greater the weight the more likely that pet is to be selected. It's based on the `lastUpdate` variable which isn't defined in the API documentation. I'm assuming it's the last time the shelter updated the pet's information, but it could be the last time Petfinder updated their information (or something else entirely). If it's the former and judging by the lack of variation in the `status` column, it might provide some measure of length of stay. If it's the latter, the effort could be a complete whiff. 
 
 
 
@@ -295,7 +295,7 @@ glimpse(bot_df)
 
 
 
-`select_if` keeps columns without values out of our message template so the tweet doesn't display a "NA" when a column is vacant. On a side note, I have really started to love these special-case `dplyr` functions (-if, -at, -all). They've become such mental energy savers for me. I recommend you have Suzan Baert's indispensable `dplyr` [series](https://suzan.rbind.io/2018/01/dplyr-tutorial-1) bookmarked because there are some sytax quirks when using these functions that I don't find completely intuitive.
+`select_if` keeps columns without values out of our message template, so the tweet doesn't display a "NA" when a column is vacant. On a side note, I have really started to love these special-case `dplyr` functions (-if, -at, -all). They've become such mental energy savers for me. I recommend you have Suzan Baert's indispensable `dplyr` tutorial [series](https://suzan.rbind.io/2018/01/dplyr-tutorial-1) bookmarked because there are some syntax quirks when using these functions that I don't find completely intuitive.
 
 I had never worked with `glue` before this project, but wow, what cool package. Here, I've layered two different templates by collapsing the first template, adding another column, and using `glue_data` again to create my final message. If you're unfamiliar with the package, there are two similar functions, `glue` and `glue_data`. The only difference being that `glue_data` looks for variables in its first argument instead of the calling environment. So for example, `glue_data` won't pay attention to any `name` variable defined outside of my pipeline, because `bot_df` is its first argument. 
 
@@ -496,7 +496,7 @@ Packages -----------------------------------------------------------------------
 
 This method should work fine if you're hosting on a local machine, but for cloud-based hosting, the parts where we write/read the image and token to/from disk may have to be changed so these things are stored in memory. With the current `rtweet` package, I don't think the solution is straight-forward. I haven't delved into it too deeply, but one problem is the image input for `post_tweet` is limited to a "path". I did do a cursory examination of the `post_tweet` function and I think it can modified without too much trouble to accept an image object that's stored in memory. 
 
-As for the token portion of issue, I haven't looked into it at all. The `twitteR` package is scheduled for a "leisurely deprecation". From my memory of a few articles that used that package, I think there might be some code in there could help. It's just a hunch though. If anyone finds a solution, I'd be very interested.
+As for the token portion of issue, I haven't looked into it at all. The `twitteR` package is scheduled for a "leisurely deprecation", and from my memory of a few articles that used that package, I think there might be some code in there could help. It's just a hunch though. If anyone finds a solution, I'd be very interested.
 
 
 
