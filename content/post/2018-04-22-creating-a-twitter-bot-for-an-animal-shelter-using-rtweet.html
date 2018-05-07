@@ -79,7 +79,7 @@ cat(paste0(&quot;TWITTER_PAT=&quot;, file_name),
 <div id="get-some-pet-data" class="section level2">
 <h2>GET some pet data</h2>
 <p>There are two options for getting the information we need: scrape the animal services’ site or use the petfinder.com <a href="https://www.petfinder.com/developers/api-docs">API</a>. There are pros and cons for each but I’m going to use the API. To access the API, you’ll need a key and to get that key you’ll need to follow the link to the documentation above and create an account.</p>
-<p>Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there’s also have a XML or JSON option for the response format. On the LMAS <a href="https://louisvilleky.gov/government/animals-services">website</a>, the phone number and addresses are listed, so I’m going to use the zip codes to narrow the field. We’re left with three entries and from here, we see our shelter ID is “KY102”. So, now we can use the shelter.getPets method to download our pet data. I’ll go into a little more detail about the code later in the post.</p>
+<p>Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there’s also a XML or JSON option for the response format. On the LMAS <a href="https://louisvilleky.gov/government/animals-services">website</a>, the phone number and addresses are listed, so I’m going to use the zip codes to narrow the field. We’re left with three entries and from here, we see our shelter ID is “KY102”. So, now we can use the shelter.getPets method to download our pet data. I’ll go into a little more detail about the code later in the post.</p>
 <pre class="r"><code>library(jsonlite)
 library(httr)
 
@@ -188,23 +188,23 @@ glimpse(pet_df)</code></pre>
 ## $ contact.city       &lt;chr&gt; &quot;Louisville&quot;
 ## $ contact.zip        &lt;chr&gt; &quot;40218&quot;
 ## $ contact.address1   &lt;chr&gt; &quot;3516 Newburg Road Adoption Center&quot;
-## $ age                &lt;chr&gt; &quot;Young&quot;
+## $ age                &lt;chr&gt; &quot;Senior&quot;
 ## $ size               &lt;chr&gt; &quot;Medium&quot;
 ## $ media.photos.photo &lt;list&gt; [&lt;c(&quot;pnt&quot;, &quot;fpm&quot;, &quot;x&quot;, &quot;pn&quot;, &quot;t&quot;), c(&quot;http...
-## $ id                 &lt;chr&gt; &quot;41332745&quot;
-## $ shelterPetId       &lt;chr&gt; &quot;A638476&quot;
-## $ breeds.breed       &lt;list&gt; [c(&quot;Pit Bull Terrier&quot;, &quot;Mixed Breed&quot;)]
-## $ name               &lt;chr&gt; &quot;Nahla&quot;
-## $ sex                &lt;chr&gt; &quot;Female&quot;
+## $ id                 &lt;chr&gt; &quot;41246124&quot;
+## $ shelterPetId       &lt;chr&gt; &quot;A637255&quot;
+## $ breeds.breed       &lt;list&gt; [[&quot;Beagle&quot;]]
+## $ name               &lt;chr&gt; &quot;Willy&quot;
+## $ sex                &lt;chr&gt; &quot;Male&quot;
 ## $ description        &lt;chr&gt; NA
-## $ mix                &lt;chr&gt; &quot;yes&quot;
+## $ mix                &lt;chr&gt; &quot;no&quot;
 ## $ shelterId          &lt;chr&gt; &quot;KY102&quot;
-## $ lastUpdate         &lt;dttm&gt; 2018-04-05
+## $ lastUpdate         &lt;dttm&gt; 2018-03-23
 ## $ animal             &lt;chr&gt; &quot;Dog&quot;
-## $ link               &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41332745&quot;
-## $ elapsedTime        &lt;time&gt; 30 days
-## $ rank               &lt;dbl&gt; 49.5
-## $ weights            &lt;dbl&gt; 0.005696058</code></pre>
+## $ link               &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246124&quot;
+## $ elapsedTime        &lt;time&gt; 45 days
+## $ rank               &lt;dbl&gt; 99.5
+## $ weights            &lt;dbl&gt; 0.01230349</code></pre>
 <p>Looking at the columns in <code>pet_df</code>, you can see some of the classes are lists and potentially need unnesting. <code>options.option</code> can have values that give information about whether the pet has been neutered (“altered”), housebroken, good with other animals, etc.. <code>breeds.breed</code> can have multiple values if the animal is mixed breed.</p>
 <p>Since unnesting these columns can result in different numbers of rows, the unnesting needs to occur in different code chunks. Also, the column names depend upon whether the column is a nested list or not. For example, if <code>breeds.breed</code> is nested, there will be a <code>$t</code> appended to column name. As long as these columns are non-NA, they’re added to <code>bot_df</code> which will be the primary dataframe we’ll use to create the tweet.</p>
 <pre class="r"><code># Dataframe to add columns to
@@ -243,14 +243,14 @@ glimpse(bot_df)</code></pre>
 <pre><code>## Observations: 1
 ## Variables: 7
 ## $ `pet type` &lt;chr&gt; &quot;Dog&quot;
-## $ `breed(s)` &lt;chr&gt; &quot;Pit Bull Terrier, Mixed Breed&quot;
+## $ `breed(s)` &lt;chr&gt; &quot;Beagle&quot;
 ## $ misc       &lt;chr&gt; &quot;altered&quot;
-## $ age        &lt;chr&gt; &quot;Young&quot;
-## $ sex        &lt;chr&gt; &quot;Female&quot;
+## $ age        &lt;chr&gt; &quot;Senior&quot;
+## $ sex        &lt;chr&gt; &quot;Male&quot;
 ## $ size       &lt;chr&gt; &quot;Medium&quot;
-## $ link       &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41332745&quot;</code></pre>
+## $ link       &lt;chr&gt; &quot;https://www.petfinder.com/petdetail/41246124&quot;</code></pre>
 <p><code>select_if</code> keeps columns without values out of our message template, so the tweet doesn’t display a “NA” when a column is vacant. On a side note, I have really started to love these special-case <code>dplyr</code> functions (-if, -at, -all). They’ve become such mental energy savers for me. I recommend you have Suzan Baert’s indispensable <code>dplyr</code> tutorial <a href="https://suzan.rbind.io/2018/01/dplyr-tutorial-1">series</a> bookmarked because there are some syntax quirks when using these functions that I don’t find completely intuitive.</p>
-<p>I had never worked with <code>glue</code> before this project, but wow, what cool package. Here, I’ve layered two different templates by collapsing the first template, adding another column, and using <code>glue_data</code> again to create my final message. If you’re unfamiliar with the package, there are two similar functions, <code>glue</code> and <code>glue_data</code>. The only difference being that <code>glue_data</code> looks for variables in its first argument instead of the calling environment. So for example, <code>glue_data</code> won’t pay attention to any <code>name</code> variable defined outside of my pipeline, because <code>bot_df</code> is its first argument.</p>
+<p>I had never worked with <code>glue</code> before this project, but wow, what a cool package. Here, I’ve layered two different templates by collapsing the first template, adding another column, and using <code>glue_data</code> again to create my final message. If you’re unfamiliar with the package, there are two similar functions, <code>glue</code> and <code>glue_data</code>. The only difference being that <code>glue_data</code> looks for variables in its first argument instead of the calling environment. So for example, <code>glue_data</code> won’t pay attention to any <code>name</code> variable defined outside of my pipeline, because <code>bot_df</code> is its first argument.</p>
 <p>Also, you should be aware that Petfinder.com requires including “Powered by Petfinder.com” in your app. It’s a small price to pay in order to help some pets find good homes.</p>
 <pre class="r"><code>message &lt;- bot_df %&gt;% 
       select_if(~!is.na(.)) %&gt;% 
@@ -269,8 +269,8 @@ glimpse(bot_df)</code></pre>
       select(message)
 
 head(message)</code></pre>
-<pre><code>##                                                                                                                                                                                                                                               message
-## 1 Nahla is:\npet type: Dog\nbreed(s): Pit Bull Terrier, Mixed Breed\nmisc: altered\nage: Young\nsex: Female\nsize: Medium\nlink: https://www.petfinder.com/petdetail/41332745\n#adoptdontshop #rescue #adoptme #shelterpets\nPowered by Petfinder.com</code></pre>
+<pre><code>##                                                                                                                                                                                                                       message
+## 1 Willy is:\npet type: Dog\nbreed(s): Beagle\nmisc: altered\nage: Senior\nsex: Male\nsize: Medium\nlink: https://www.petfinder.com/petdetail/41246124\n#adoptdontshop #rescue #adoptme #shelterpets\nPowered by Petfinder.com</code></pre>
 <p>You can’t have a pet app and not have an oversized image that unleashes all the cuteness. Gotta tug on those heart strings. Unfortunately, Twitter doesn’t display images from an image link, so we’re going to have to jump through some hoops. Twitter does permit image files to be uploaded, and one of our columns has links to pictures with varying resolutions. We pull the image into our environment from the URL and write it to a temporary file on our disk that will be fed to <code>post_tweet</code> later.</p>
 <pre class="r"><code># Some images are blurry on Twitter, but row 3 seems to work alright
 

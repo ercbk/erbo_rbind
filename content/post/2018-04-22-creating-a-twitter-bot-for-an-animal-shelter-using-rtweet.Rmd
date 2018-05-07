@@ -97,7 +97,7 @@ cat(paste0("TWITTER_PAT=", file_name),
 
 There are two options for getting the information we need: scrape the animal services' site or use the petfinder.com [API](https://www.petfinder.com/developers/api-docs). There are pros and cons for each but I'm going to use the API. To access the API, you'll need a key and to get that key you'll need to follow the link to the documentation above and create an account.
 
-Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there's also have a XML or JSON option for the response format. On the LMAS [website](https://louisvilleky.gov/government/animals-services), the phone number and addresses are listed, so I'm going to use the zip codes to narrow the field. We're left with three entries and from here, we see our shelter ID is "KY102". So, now we can use the shelter.getPets method to download our pet data. I'll go into a little more detail about the code later in the post.
+Once we have our key we need to figure out the shelter ID. The location argument can take a ZIP code or city/state input, and there's also a XML or JSON option for the response format. On the LMAS [website](https://louisvilleky.gov/government/animals-services), the phone number and addresses are listed, so I'm going to use the zip codes to narrow the field. We're left with three entries and from here, we see our shelter ID is "KY102". So, now we can use the shelter.getPets method to download our pet data. I'll go into a little more detail about the code later in the post.
 
 
 
@@ -297,7 +297,7 @@ glimpse(bot_df)
 
 `select_if` keeps columns without values out of our message template, so the tweet doesn't display a "NA" when a column is vacant. On a side note, I have really started to love these special-case `dplyr` functions (-if, -at, -all). They've become such mental energy savers for me. I recommend you have Suzan Baert's indispensable `dplyr` tutorial [series](https://suzan.rbind.io/2018/01/dplyr-tutorial-1) bookmarked because there are some syntax quirks when using these functions that I don't find completely intuitive.
 
-I had never worked with `glue` before this project, but wow, what cool package. Here, I've layered two different templates by collapsing the first template, adding another column, and using `glue_data` again to create my final message. If you're unfamiliar with the package, there are two similar functions, `glue` and `glue_data`. The only difference being that `glue_data` looks for variables in its first argument instead of the calling environment. So for example, `glue_data` won't pay attention to any `name` variable defined outside of my pipeline, because `bot_df` is its first argument. 
+I had never worked with `glue` before this project, but wow, what a cool package. Here, I've layered two different templates by collapsing the first template, adding another column, and using `glue_data` again to create my final message. If you're unfamiliar with the package, there are two similar functions, `glue` and `glue_data`. The only difference being that `glue_data` looks for variables in its first argument instead of the calling environment. So for example, `glue_data` won't pay attention to any `name` variable defined outside of my pipeline, because `bot_df` is its first argument. 
 
 Also, you should be aware that Petfinder.com requires including "Powered by Petfinder.com" in your app. It's a small price to pay in order to help some pets find good homes.
 
