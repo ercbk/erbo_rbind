@@ -47,7 +47,7 @@ post = "/blog/:year-:month-:day-:slug/"
   
   sidebarMenuEnabled = true
   
-  github = "https://github.com/nllspc/"
+  github = "https://github.com/ercbk/"
   twitter = "https://twitter.com/erbo_da"
   
   # --- End sidebar options ---
